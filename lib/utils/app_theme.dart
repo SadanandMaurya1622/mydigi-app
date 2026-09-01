@@ -36,7 +36,7 @@ class AppTheme {
     colorSchemeSeed: primary,
     scaffoldBackgroundColor: bgLight,
     appBarTheme: const AppBarTheme(
-      backgroundColor: bgLight,
+      backgroundColor: Colors.transparent,
       elevation: 0,
       scrolledUnderElevation: 0,
       centerTitle: false,
@@ -77,7 +77,7 @@ class AppTheme {
     colorSchemeSeed: primaryDark,
     scaffoldBackgroundColor: bgDark,
     appBarTheme: const AppBarTheme(
-      backgroundColor: bgDark,
+      backgroundColor: Colors.transparent,
       elevation: 0,
       scrolledUnderElevation: 0,
       centerTitle: false,

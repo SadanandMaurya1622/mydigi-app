@@ -5,6 +5,7 @@ import '../models/product_model.dart';
 import '../providers/warranty_provider.dart';
 import '../utils/app_theme.dart';
 import '../utils/translations.dart';
+import '../widgets/glass_container.dart';
 
 class ScannerScreen extends StatefulWidget {
   const ScannerScreen({super.key});
@@ -166,7 +167,7 @@ class _ScannerScreenState extends State<ScannerScreen> with SingleTickerProvider
     final lang = provider.language;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF020617),
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -176,289 +177,273 @@ class _ScannerScreenState extends State<ScannerScreen> with SingleTickerProvider
           style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
         ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: Column(
-          children: [
-            if (!_hasExtracted) ...[
-              // Presets selector
-              SizedBox(
-                height: 36,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: _presets.length,
-                  itemBuilder: (context, idx) {
-                    final isSel = _selectedPreset == idx;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: ChoiceChip(
-                        label: Text(
-                          _presets[idx]['title'],
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
-                            color: isSel ? Colors.white : Colors.white70,
-                          ),
-                        ),
-                        selected: isSel,
-                        selectedColor: AppTheme.primary,
-                        backgroundColor: const Color(0xFF1E293B),
-                        onSelected: (selected) {
-                          if (selected) setState(() => _selectedPreset = idx);
-                        },
-                      ),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              // Camera Viewfinder Box
-              Expanded(
-                child: Container(
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF0F172A),
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: const Color(0xFF334155), width: 1.5),
-                  ),
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      // Simulated Invoice Preview
-                      Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Opacity(
-                          opacity: 0.25,
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(Icons.receipt_long, size: 72, color: Colors.white),
-                              const SizedBox(height: 12),
-                              Text(
-                                _presets[_selectedPreset]['name'],
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+      body: GlassScaffoldBackground(
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Column(
+              children: [
+                if (!_hasExtracted) ...[
+                  // Presets selector
+                  SizedBox(
+                    height: 38,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: _presets.length,
+                      itemBuilder: (context, idx) {
+                        final isSel = _selectedPreset == idx;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: ChoiceChip(
+                            label: Text(
+                              _presets[idx]['title'],
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
+                                color: isSel ? Colors.white : Colors.white70,
                               ),
+                            ),
+                            selected: isSel,
+                            selectedColor: AppTheme.primary,
+                            backgroundColor: const Color(0xFF1E293B).withAlpha(160),
+                            onSelected: (selected) {
+                              if (selected) setState(() => _selectedPreset = idx);
+                            },
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Camera Viewfinder Box with Glassy Frame
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(24),
+                      child: Container(
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0F172A).withAlpha(180),
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(color: Colors.white.withAlpha(40), width: 1.5),
+                        ),
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            // Bill Image Mock Preview
+                            Image.network(
+                              _presets[_selectedPreset]['image'],
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                              height: double.infinity,
+                              opacity: const AlwaysStoppedAnimation(0.45),
+                            ),
+
+                            // Laser Scanner Animation Line
+                            AnimatedBuilder(
+                              animation: _animController,
+                              builder: (context, child) {
+                                return Positioned(
+                                  top: MediaQuery.of(context).size.height * 0.15 * _animController.value + 60,
+                                  left: 20,
+                                  right: 20,
+                                  child: Container(
+                                    height: 3,
+                                    decoration: BoxDecoration(
+                                      gradient: const LinearGradient(
+                                        colors: [Colors.transparent, Color(0xFF38BDF8), Color(0xFF818CF8), Colors.transparent],
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: const Color(0xFF38BDF8).withAlpha(180),
+                                          blurRadius: 12,
+                                          spreadRadius: 2,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+
+                            // Viewfinder Corners
+                            Positioned(
+                              top: 20,
+                              left: 20,
+                              child: Container(
+                                width: 30,
+                                height: 30,
+                                decoration: const BoxDecoration(
+                                  border: Border(
+                                    top: BorderSide(color: AppTheme.secondary, width: 3),
+                                    left: BorderSide(color: AppTheme.secondary, width: 3),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            Positioned(
+                              top: 20,
+                              right: 20,
+                              child: Container(
+                                width: 30,
+                                height: 30,
+                                decoration: const BoxDecoration(
+                                  border: Border(
+                                    top: BorderSide(color: AppTheme.secondary, width: 3),
+                                    right: BorderSide(color: AppTheme.secondary, width: 3),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            Positioned(
+                              bottom: 20,
+                              left: 20,
+                              child: Container(
+                                width: 30,
+                                height: 30,
+                                decoration: const BoxDecoration(
+                                  border: Border(
+                                    bottom: BorderSide(color: AppTheme.secondary, width: 3),
+                                    left: BorderSide(color: AppTheme.secondary, width: 3),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            Positioned(
+                              bottom: 20,
+                              right: 20,
+                              child: Container(
+                                width: 30,
+                                height: 30,
+                                decoration: const BoxDecoration(
+                                  border: Border(
+                                    bottom: BorderSide(color: AppTheme.secondary, width: 3),
+                                    right: BorderSide(color: AppTheme.secondary, width: 3),
+                                  ),
+                                ),
+                              ),
+                            ),
+
+                            // Center Message Glass Pill
+                            if (!_isScanning)
+                              GlassCard(
+                                borderRadius: 20,
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                opacity: 0.85,
+                                child: const Text(
+                                  'Align Bill or Invoice inside viewfinder',
+                                  style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Scan Action Button
+                  ElevatedButton.icon(
+                    onPressed: _isScanning ? null : _triggerScan,
+                    icon: _isScanning
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                          )
+                        : const Icon(Icons.camera_alt),
+                    label: Text(
+                      _isScanning ? 'Extracting with OCR AI...' : 'Snap & Auto-Extract Details',
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primary,
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size(double.infinity, 54),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                ] else ...[
+                  // Extracted Details Glass Review View
+                  Expanded(
+                    child: GlassCard(
+                      borderRadius: 24,
+                      padding: const EdgeInsets.all(16),
+                      opacity: 0.88,
+                      blur: 24,
+                      child: ListView(
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.check_circle, color: AppTheme.success, size: 20),
+                              const SizedBox(width: 8),
                               Text(
-                                '₹${_presets[_selectedPreset]['price'].toInt()} • ${_presets[_selectedPreset]['seller']}',
-                                style: const TextStyle(color: Colors.white70, fontSize: 11),
+                                'AI Extracted Data (Editable)',
+                                style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
                               ),
                             ],
                           ),
-                        ),
+                          const SizedBox(height: 16),
+                          _buildScanField('Product Name', _extractedName),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              Expanded(child: _buildScanField('Price (₹)', _extractedPrice)),
+                              const SizedBox(width: 10),
+                              Expanded(child: _buildScanField('Brand', _extractedBrand)),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              Expanded(child: _buildScanField('Serial No', _extractedSerial)),
+                              const SizedBox(width: 10),
+                              Expanded(child: _buildScanField('Invoice No', _extractedInvoice)),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          _buildScanField('Seller Store', _extractedSeller),
+                        ],
                       ),
-
-                      // Scanning Laser Animation
-                      if (_isScanning)
-                        AnimatedBuilder(
-                          animation: _animController,
-                          builder: (context, child) {
-                            return Positioned(
-                              top: 40 + (_animController.value * 280),
-                              left: 20,
-                              right: 20,
-                              child: Container(
-                                height: 3,
-                                decoration: BoxDecoration(
-                                  gradient: const LinearGradient(
-                                    colors: [Colors.transparent, Color(0xFF06B6D4), Color(0xFF3B82F6), Colors.transparent],
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: const Color(0xFF06B6D4).withAlpha(200),
-                                      blurRadius: 10,
-                                      spreadRadius: 2,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-
-                      // Frame Corners
-                      Positioned(
-                        top: 20,
-                        left: 20,
-                        child: Container(
-                          width: 30,
-                          height: 30,
-                          decoration: const BoxDecoration(
-                            border: Border(
-                              top: BorderSide(color: AppTheme.secondary, width: 3),
-                              left: BorderSide(color: AppTheme.secondary, width: 3),
-                            ),
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        top: 20,
-                        right: 20,
-                        child: Container(
-                          width: 30,
-                          height: 30,
-                          decoration: const BoxDecoration(
-                            border: Border(
-                              top: BorderSide(color: AppTheme.secondary, width: 3),
-                              right: BorderSide(color: AppTheme.secondary, width: 3),
-                            ),
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        bottom: 20,
-                        left: 20,
-                        child: Container(
-                          width: 30,
-                          height: 30,
-                          decoration: const BoxDecoration(
-                            border: Border(
-                              bottom: BorderSide(color: AppTheme.secondary, width: 3),
-                              left: BorderSide(color: AppTheme.secondary, width: 3),
-                            ),
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        bottom: 20,
-                        right: 20,
-                        child: Container(
-                          width: 30,
-                          height: 30,
-                          decoration: const BoxDecoration(
-                            border: Border(
-                              bottom: BorderSide(color: AppTheme.secondary, width: 3),
-                              right: BorderSide(color: AppTheme.secondary, width: 3),
-                            ),
-                          ),
-                        ),
-                      ),
-
-                      // Center Message
-                      if (!_isScanning)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withAlpha(150),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: const Text(
-                            'Align Bill or Invoice inside viewfinder',
-                            style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
-                          ),
-                        ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Scan Action Button
-              ElevatedButton.icon(
-                onPressed: _isScanning ? null : _triggerScan,
-                icon: _isScanning
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                      )
-                    : const Icon(Icons.camera_alt),
-                label: Text(
-                  _isScanning ? 'Extracting with OCR AI...' : 'Snap & Auto-Extract Details',
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primary,
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size(double.infinity, 54),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                ),
-              ),
-              const SizedBox(height: 10),
-            ] else ...[
-              // Extracted Details Review View
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF0F172A),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppTheme.success.withAlpha(100)),
-                  ),
-                  child: ListView(
+                  const SizedBox(height: 16),
+                  Row(
                     children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.check_circle, color: AppTheme.success, size: 20),
-                          const SizedBox(width: 8),
-                          Text(
-                            'AI Extracted Data (Editable)',
-                            style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => setState(() => _hasExtracted = false),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.white70,
+                            side: const BorderSide(color: Colors.white30),
+                            minimumSize: const Size(0, 50),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                           ),
-                        ],
+                          child: const Text('Scan Again'),
+                        ),
                       ),
-                      const SizedBox(height: 16),
-                      _buildScanField('Product Name', _extractedName),
-                      const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          Expanded(child: _buildScanField('Price (₹)', _extractedPrice)),
-                          const SizedBox(width: 10),
-                          Expanded(child: _buildScanField('Brand', _extractedBrand)),
-                        ],
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 2,
+                        child: ElevatedButton(
+                          onPressed: _confirmAndSave,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.success,
+                            foregroundColor: Colors.white,
+                            minimumSize: const Size(0, 50),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          ),
+                          child: const Text('Save to My Catalog', style: TextStyle(fontWeight: FontWeight.bold)),
+                        ),
                       ),
-                      const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          Expanded(child: _buildScanField('Serial No', _extractedSerial)),
-                          const SizedBox(width: 10),
-                          Expanded(child: _buildScanField('Invoice No', _extractedInvoice)),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      _buildScanField('Seller Store', _extractedSeller),
                     ],
                   ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => setState(() => _hasExtracted = false),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.white70,
-                        side: const BorderSide(color: Colors.white30),
-                        minimumSize: const Size(0, 50),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      ),
-                      child: const Text('Scan Again'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    flex: 2,
-                    child: ElevatedButton(
-                      onPressed: _confirmAndSave,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.success,
-                        foregroundColor: Colors.white,
-                        minimumSize: const Size(0, 50),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      ),
-                      child: const Text(
-                        'Confirm & Save Product',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
+                  const SizedBox(height: 10),
                 ],
-              ),
-              const SizedBox(height: 10),
-            ],
-          ],
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -468,23 +453,16 @@ class _ScannerScreenState extends State<ScannerScreen> with SingleTickerProvider
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold)),
+        Text(label, style: const TextStyle(fontSize: 11, color: Colors.white70)),
         const SizedBox(height: 4),
         TextField(
           controller: controller,
           style: const TextStyle(color: Colors.white, fontSize: 13),
           decoration: InputDecoration(
             filled: true,
-            fillColor: const Color(0xFF1E293B),
+            fillColor: const Color(0xFF1E293B).withAlpha(160),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.white24)),
             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFF334155)),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFF334155)),
-            ),
           ),
         ),
       ],

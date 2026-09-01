@@ -5,6 +5,7 @@ import '../models/product_model.dart';
 import '../providers/warranty_provider.dart';
 import '../utils/app_theme.dart';
 import '../utils/translations.dart';
+import '../widgets/glass_container.dart';
 
 class AMCScreen extends StatefulWidget {
   const AMCScreen({super.key});
@@ -35,7 +36,11 @@ class _AMCScreenState extends State<AMCScreen> with SingleTickerProviderStateMix
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
         title: Text(
           AppTranslations.tr('amc', lang),
           style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18),
@@ -51,40 +56,42 @@ class _AMCScreenState extends State<AMCScreen> with SingleTickerProviderStateMix
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          // Tab 1: AMC Records
-          ListView(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      body: GlassScaffoldBackground(
+        child: SafeArea(
+          child: TabBarView(
+            controller: _tabController,
             children: [
-              ...provider.amcRecords.map((amc) => _buildAMCCard(amc, isDark, lang)),
-            ],
-          ),
+              // Tab 1: AMC Records
+              ListView(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                children: [
+                  ...provider.amcRecords.map((amc) => _buildAMCCard(amc, isDark, lang)),
+                  const SizedBox(height: 100),
+                ],
+              ),
 
-          // Tab 2: Insurance Policies
-          ListView(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            children: [
-              ...provider.insurancePolicies.map((ins) => _buildInsuranceCard(ins, isDark, lang)),
+              // Tab 2: Insurance Policies
+              ListView(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                children: [
+                  ...provider.insurancePolicies.map((ins) => _buildInsuranceCard(ins, isDark, lang)),
+                  const SizedBox(height: 100),
+                ],
+              ),
             ],
           ),
-        ],
+        ),
       ),
     );
   }
 
   Widget _buildAMCCard(AMCRecord amc, bool isDark, String lang) {
-    return Container(
+    return GlassCard(
       margin: const EdgeInsets.only(bottom: 12),
+      borderRadius: 22,
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark ? AppTheme.surfaceDark : AppTheme.surfaceLight,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: isDark ? const Color(0xFF334155) : AppTheme.borderLight,
-        ),
-      ),
+      opacity: 0.82,
+      blur: 24,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -121,7 +128,7 @@ class _AMCScreenState extends State<AMCScreen> with SingleTickerProviderStateMix
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+              color: isDark ? const Color(0xFF0F172A).withAlpha(150) : const Color(0xFFF8FAFC),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
@@ -182,16 +189,12 @@ class _AMCScreenState extends State<AMCScreen> with SingleTickerProviderStateMix
   }
 
   Widget _buildInsuranceCard(InsurancePolicy ins, bool isDark, String lang) {
-    return Container(
+    return GlassCard(
       margin: const EdgeInsets.only(bottom: 12),
+      borderRadius: 22,
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark ? AppTheme.surfaceDark : AppTheme.surfaceLight,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: isDark ? const Color(0xFF334155) : AppTheme.borderLight,
-        ),
-      ),
+      opacity: 0.82,
+      blur: 24,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -221,14 +224,14 @@ class _AMCScreenState extends State<AMCScreen> with SingleTickerProviderStateMix
           ),
           const SizedBox(height: 4),
           Text(
-            '${ins.provider} • Policy: ${ins.policyNumber}',
+            '${ins.provider} • Policy #${ins.policyNumber}',
             style: TextStyle(fontSize: 11, color: isDark ? AppTheme.textMutedDark : AppTheme.textMutedLight),
           ),
           const SizedBox(height: 10),
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+              color: isDark ? const Color(0xFF0F172A).withAlpha(150) : const Color(0xFFF8FAFC),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
@@ -237,15 +240,8 @@ class _AMCScreenState extends State<AMCScreen> with SingleTickerProviderStateMix
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Coverage Sum', style: TextStyle(fontSize: 10, color: Colors.grey)),
-                    Text('₹${ins.coverageAmount.toInt()}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.primary)),
-                  ],
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Premium Paid', style: TextStyle(fontSize: 10, color: Colors.grey)),
-                    Text('₹${ins.premiumAmount.toInt()}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                    const Text('Sum Insured', style: TextStyle(fontSize: 10, color: Colors.grey)),
+                    Text('₹${ins.coverageAmount.toInt()}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.primary)),
                   ],
                 ),
                 Column(
@@ -255,8 +251,40 @@ class _AMCScreenState extends State<AMCScreen> with SingleTickerProviderStateMix
                     Text(ins.expiryDate, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                   ],
                 ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Premium Paid', style: TextStyle(fontSize: 10, color: Colors.grey)),
+                    Text('₹${ins.premiumAmount.toInt()}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                  ],
+                ),
               ],
             ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Provider: ${ins.provider}',
+                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+              ),
+              ElevatedButton.icon(
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Contacting ${ins.provider} Claims Desk...')),
+                  );
+                },
+                icon: const Icon(Icons.support_agent, size: 14),
+                label: const Text('File Claim', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0EA5E9),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+            ],
           ),
         ],
       ),

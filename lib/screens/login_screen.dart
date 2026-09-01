@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../providers/warranty_provider.dart';
 import '../utils/app_theme.dart';
+import '../widgets/glass_container.dart';
 import 'splash_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -23,14 +24,14 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     super.initState();
     _animController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1000),
+      duration: const Duration(milliseconds: 900),
     );
 
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _animController, curve: Curves.easeOut),
     );
 
-    _slideAnimation = Tween<Offset>(begin: const Offset(0, 0.1), end: Offset.zero).animate(
+    _slideAnimation = Tween<Offset>(begin: const Offset(0, 0.08), end: Offset.zero).animate(
       CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic),
     );
 
@@ -47,7 +48,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     final provider = Provider.of<WarrantyProvider>(context, listen: false);
     setState(() => _isLoading = true);
 
-    // Simulate Google Sign-In OAuth flow
+    // Simulate Google Sign-In OAuth authentication
     Future.delayed(const Duration(milliseconds: 900), () {
       if (!mounted) return;
       setState(() => _isLoading = false);
@@ -59,11 +60,11 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         '+91 98200 12345',
       );
 
-      // Navigate to SplashScreen which then transitions to MainNavigationHost
+      // Navigate smoothly to SplashScreen
       Navigator.pushReplacement(
         context,
         PageRouteBuilder(
-          transitionDuration: const Duration(milliseconds: 500),
+          transitionDuration: const Duration(milliseconds: 450),
           pageBuilder: (_, animation, secondaryAnimation) => const SplashScreen(),
           transitionsBuilder: (_, animation, _, child) => FadeTransition(opacity: animation, child: child),
         ),
@@ -76,22 +77,10 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     final provider = Provider.of<WarrantyProvider>(context);
     final lang = provider.language;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
     final isHindi = lang == 'hi';
 
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: isDark
-                ? [const Color(0xFF0B0F19), const Color(0xFF111827), const Color(0xFF1E1B4B)]
-                : [const Color(0xFFF8FAFC), const Color(0xFFEEF2FF), const Color(0xFFE0E7FF)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
+      body: GlassScaffoldBackground(
         child: SafeArea(
           child: FadeTransition(
             opacity: _fadeAnimation,
@@ -101,70 +90,55 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                 child: Column(
                   children: [
-                    // Top Actions Bar (Language & Theme Mode)
+                    // 1. Top Bar (Brand Capsule + Language Switcher)
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         // App Brand Pill
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                          decoration: BoxDecoration(
-                            color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: isDark ? const Color(0xFF334155) : AppTheme.borderLight,
-                            ),
-                          ),
+                        GlassCard(
+                          borderRadius: 20,
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          opacity: 0.8,
                           child: Row(
                             children: [
                               Container(
-                                width: 18,
-                                height: 18,
+                                width: 20,
+                                height: 20,
                                 decoration: const BoxDecoration(
                                   gradient: LinearGradient(colors: [AppTheme.primary, AppTheme.accent]),
                                   shape: BoxShape.circle,
                                 ),
                                 child: const Center(
-                                  child: Text('M', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w900)),
+                                  child: Text('M', style: TextStyle(color: Colors.white, fontSize: 11.5, fontWeight: FontWeight.w900)),
                                 ),
                               ),
-                              const SizedBox(width: 6),
+                              const SizedBox(width: 8),
                               Text(
                                 'MyDigi',
-                                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 12),
+                                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13),
                               ),
                             ],
                           ),
                         ),
 
                         // Language Toggle Pill
-                        TextButton(
-                          onPressed: () {
+                        GestureDetector(
+                          onTap: () {
                             provider.setLanguage(lang == 'en' ? 'hi' : 'en');
                           },
-                          style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            minimumSize: Size.zero,
-                          ),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                              borderRadius: BorderRadius.circular(14),
-                              border: Border.all(
-                                color: isDark ? const Color(0xFF334155) : AppTheme.borderLight,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withAlpha(isDark ? 30 : 10),
-                                  blurRadius: 6,
-                                  offset: const Offset(0, 2),
+                          child: GlassCard(
+                            borderRadius: 16,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            opacity: 0.8,
+                            child: Row(
+                              children: [
+                                const Icon(Icons.language_rounded, size: 14, color: AppTheme.primary),
+                                const SizedBox(width: 6),
+                                Text(
+                                  isHindi ? '🇬🇧 English' : '🇮🇳 हिंदी',
+                                  style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
                                 ),
                               ],
-                            ),
-                            child: Text(
-                              isHindi ? '🇬🇧 Switch to English' : '🇮🇳 हिंदी में बदलें',
-                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
                             ),
                           ),
                         ),
@@ -173,25 +147,34 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
                     const Spacer(flex: 1),
 
-                    // Center Hero Graphic: Glowing App Icon
+                    // 2. Central 3D Glowing App Emblem
                     Container(
-                      width: 88,
-                      height: 88,
+                      width: 90,
+                      height: 90,
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
                           colors: [Color(0xFF4F46E5), Color(0xFF7C3AED), Color(0xFF9333EA)],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
-                        borderRadius: BorderRadius.circular(26),
+                        borderRadius: BorderRadius.circular(28),
                         boxShadow: [
                           BoxShadow(
                             color: const Color(0xFF4F46E5).withAlpha(140),
-                            blurRadius: 28,
+                            blurRadius: 30,
                             spreadRadius: 4,
-                            offset: const Offset(0, 8),
+                            offset: const Offset(0, 10),
+                          ),
+                          BoxShadow(
+                            color: const Color(0xFF9333EA).withAlpha(80),
+                            blurRadius: 16,
+                            offset: const Offset(0, 4),
                           ),
                         ],
+                        border: Border.all(
+                          color: Colors.white.withAlpha(180),
+                          width: 1.5,
+                        ),
                       ),
                       child: Center(
                         child: Text(
@@ -200,6 +183,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                             color: Colors.white,
                             fontWeight: FontWeight.w900,
                             fontSize: 48,
+                            letterSpacing: -1,
                           ),
                         ),
                       ),
@@ -210,7 +194,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                     Text(
                       'MyDigi',
                       style: GoogleFonts.outfit(
-                        fontSize: 32,
+                        fontSize: 34,
                         fontWeight: FontWeight.w900,
                         letterSpacing: -0.5,
                         color: isDark ? Colors.white : AppTheme.textMainLight,
@@ -222,7 +206,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                       child: Text(
                         isHindi
                             ? 'अपने हर प्रोडक्ट का खर्चा और वारंटी, एक ही ऐप में।'
-                            : 'All-in-one Product, Warranty, Expense & Service Manager',
+                            : 'All-in-One Product, Warranty & Ownership Expense Vault',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 13,
@@ -235,14 +219,14 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
                     const SizedBox(height: 28),
 
-                    // Feature Showcase Cards (2x2 Compact Grid)
+                    // 3. Glassy Enterprise Feature Cards (2x2 Grid)
                     Row(
                       children: [
                         _buildFeatureCard(
                           icon: Icons.qr_code_scanner,
                           iconColor: const Color(0xFF6366F1),
-                          title: isHindi ? 'AI बिल स्कैनर' : 'AI Bill Scanner',
-                          subtitle: isHindi ? 'स्मार्ट OCR एक्सट्रैक्शन' : 'Instant OCR data extraction',
+                          title: isHindi ? 'AI बिल स्कैनर' : 'AI OCR Scanner',
+                          subtitle: isHindi ? 'स्मार्ट डेटा एक्सट्रैक्शन' : 'Instant invoice extraction',
                           isDark: isDark,
                         ),
                         const SizedBox(width: 10),
@@ -250,7 +234,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                           icon: Icons.notifications_active_outlined,
                           iconColor: const Color(0xFFF59E0B),
                           title: isHindi ? 'वारंटी अलर्ट' : 'Warranty Alerts',
-                          subtitle: isHindi ? 'समय पर रीन्यूअल रिमाइंडर' : 'Never miss warranty expiry',
+                          subtitle: isHindi ? 'समय पर रिमाइंडर' : 'Never miss free service',
                           isDark: isDark,
                         ),
                       ],
@@ -270,7 +254,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                           icon: Icons.lock_outline,
                           iconColor: const Color(0xFFEC4899),
                           title: isHindi ? 'सुरक्षित वॉल्ट' : 'Encrypted Vault',
-                          subtitle: isHindi ? '256-Bit प्राइवेट क्लाउड' : '256-Bit secure cloud',
+                          subtitle: isHindi ? '256-Bit प्राइवेट बैकअप' : '256-Bit cloud backup',
                           isDark: isDark,
                         ),
                       ],
@@ -278,81 +262,72 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
                     const Spacer(flex: 2),
 
-                    // Google Sign-In Primary Action Button
-                    Container(
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: isDark ? Colors.black.withAlpha(80) : const Color(0xFF4F46E5).withAlpha(40),
-                            blurRadius: 16,
-                            offset: const Offset(0, 6),
-                          ),
-                        ],
-                      ),
-                      child: Material(
-                        color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        child: InkWell(
-                          onTap: _isLoading ? null : _handleGoogleSignIn,
-                          borderRadius: BorderRadius.circular(20),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-                                width: 1.5,
-                              ),
-                            ),
-                            child: _isLoading
-                                ? Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      const SizedBox(
-                                        width: 22,
-                                        height: 22,
-                                        child: CircularProgressIndicator(strokeWidth: 2.5, valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primary)),
-                                      ),
-                                      const SizedBox(width: 14),
-                                      Text(
-                                        isHindi ? 'गूगल से कनेक्ट हो रहे हैं...' : 'Signing in with Google...',
-                                        style: GoogleFonts.outfit(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.bold,
-                                          color: isDark ? Colors.white : AppTheme.textMainLight,
-                                        ),
-                                      ),
-                                    ],
-                                  )
-                                : Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      // Authentic 4-Color Google 'G' Icon
-                                      _buildGoogleLogo(),
-                                      const SizedBox(width: 14),
-                                      Text(
-                                        isHindi ? 'Continue with Google' : 'Continue with Google',
-                                        style: GoogleFonts.outfit(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w800,
-                                          letterSpacing: 0.2,
-                                          color: isDark ? Colors.white : const Color(0xFF1E293B),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                          ),
+                    // 4. Professional "Continue with Google" Action Button
+                    GlassCard(
+                      borderRadius: 22,
+                      padding: EdgeInsets.zero,
+                      opacity: 0.88,
+                      blur: 24,
+                      onTap: _isLoading ? null : _handleGoogleSignIn,
+                      shadows: [
+                        BoxShadow(
+                          color: isDark
+                              ? Colors.black.withAlpha(140)
+                              : AppTheme.primary.withAlpha(45),
+                          blurRadius: 20,
+                          offset: const Offset(0, 8),
                         ),
+                      ],
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                        child: _isLoading
+                            ? Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const SizedBox(
+                                    width: 22,
+                                    height: 22,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2.5,
+                                      valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primary),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 14),
+                                  Text(
+                                    isHindi ? 'Google से कनेक्ट हो रहे हैं...' : 'Signing in with Google...',
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold,
+                                      color: isDark ? Colors.white : AppTheme.textMainLight,
+                                    ),
+                                  ),
+                                ],
+                              )
+                            : Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  // Authentic 4-Color Google Logo
+                                  _buildGoogleLogo(),
+                                  const SizedBox(width: 14),
+                                  Text(
+                                    'Continue with Google',
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 0.2,
+                                      color: isDark ? Colors.white : const Color(0xFF1E293B),
+                                    ),
+                                  ),
+                                ],
+                              ),
                       ),
                     ),
 
                     const SizedBox(height: 12),
 
-                    // Quick Tap Helper Text
+                    // Subtext Helper
                     Text(
-                      isHindi ? '1-Tap सुरक्षित लॉगिन • पासवर्ड की ज़रूरत नहीं' : 'Fast 1-Tap Secure Sign-In • No Password Needed',
+                      isHindi ? '1-Tap सुरक्षित लॉगिन • किसी पासवर्ड की ज़रूरत नहीं' : 'Fast & Secure 1-Tap Sign-In • No Password Required',
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
@@ -362,14 +337,14 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
                     const SizedBox(height: 20),
 
-                    // Trust Badges & Terms
+                    // 5. Trust & Security Badges
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         const Icon(Icons.verified_user_rounded, size: 14, color: AppTheme.success),
-                        const SizedBox(width: 5),
+                        const SizedBox(width: 6),
                         Text(
-                          isHindi ? 'Google द्वारा सत्यापित • 100% सुरक्षित' : 'Google Verified • 100% Private & Encrypted',
+                          isHindi ? 'Google Cloud द्वारा सत्यापित • 100% सुरक्षित' : 'Google Verified • 100% Private & Encrypted',
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
@@ -408,22 +383,11 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     required bool isDark,
   }) {
     return Expanded(
-      child: Container(
+      child: GlassCard(
+        borderRadius: 18,
         padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1E293B).withAlpha(180) : Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withAlpha(isDark ? 40 : 8),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
+        opacity: 0.8,
+        blur: 20,
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [

@@ -6,6 +6,7 @@ import '../models/product_model.dart';
 import '../providers/warranty_provider.dart';
 import '../utils/app_theme.dart';
 import '../utils/translations.dart';
+import '../widgets/glass_container.dart';
 import 'add_product_screen.dart';
 import 'expenses_screen.dart';
 import 'claims_screen.dart';
@@ -21,6 +22,7 @@ class ProductDetailScreen extends StatelessWidget {
     final provider = Provider.of<WarrantyProvider>(context);
     final lang = provider.language;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isHindi = lang == 'hi';
 
     // Get current product state from provider (in case updated)
     final currentProduct = provider.products.firstWhere(
@@ -46,7 +48,11 @@ class ProductDetailScreen extends StatelessWidget {
     }
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
         title: Text(
           currentProduct.name,
           style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16),
@@ -73,528 +79,459 @@ class ProductDetailScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Hero Image Card
-            Stack(
+      body: GlassScaffoldBackground(
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(24),
-                  child: Image.network(
-                    currentProduct.imageUrl,
-                    width: double.infinity,
-                    height: 210,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      width: double.infinity,
-                      height: 210,
-                      color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
-                      child: const Icon(Icons.image_outlined, size: 48, color: Colors.grey),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  top: 12,
-                  right: 12,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: statusColor,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: statusColor.withAlpha(100),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Text(
-                      currentProduct.warrantyStatus,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  top: 12,
-                  left: 12,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withAlpha(165),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      currentProduct.category,
-                      style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            // Product Name & Brand Row
-            Text(
-              currentProduct.name,
-              style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              '${currentProduct.brand} • Model: ${currentProduct.modelNumber} • Serial: ${currentProduct.serialNumber}',
-              style: TextStyle(
-                fontSize: 12,
-                color: isDark ? AppTheme.textMutedDark : AppTheme.textMutedLight,
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Total Cost of Ownership (TCO) Card
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1E293B) : const Color(0xFFEEF2FF),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: isDark ? const Color(0xFF334155) : const Color(0xFFC7D2FE),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            AppTranslations.tr('costOfOwnership', lang),
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                          ),
-                          Text(
-                            lang == 'en' ? 'Purchase + Service + Maintenance + AMC' : 'खरीद + सर्विस + मेंटेनेंस + AMC',
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: isDark ? AppTheme.textMutedDark : AppTheme.textMutedLight,
-                            ),
-                          ),
-                        ],
-                      ),
-                      Text(
-                        '₹${currentProduct.totalCostOfOwnership.toInt()}',
-                        style: GoogleFonts.outfit(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w900,
-                          color: AppTheme.primary,
+                // 1. Hero Image Card with Glassy Overlays
+                Stack(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(24),
+                      child: Image.network(
+                        currentProduct.imageUrl,
+                        width: double.infinity,
+                        height: 210,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => Container(
+                          width: double.infinity,
+                          height: 210,
+                          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
+                          child: const Icon(Icons.image_outlined, size: 48, color: Colors.grey),
                         ),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  const Divider(height: 1),
-                  const SizedBox(height: 12),
-                  // Breakdown Row
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 8,
-                    children: [
-                      _buildTcoPill('Purchase', '₹${currentProduct.purchasePrice.toInt()}', isDark),
-                      _buildTcoPill('Maintenance', '₹${currentProduct.costBreakdown.maintenance.toInt()}', isDark),
-                      _buildTcoPill('Repair', '₹${currentProduct.costBreakdown.repair.toInt()}', isDark),
-                      _buildTcoPill('AMC', '₹${currentProduct.costBreakdown.amc.toInt()}', isDark),
-                      _buildTcoPill('Accessories', '₹${currentProduct.costBreakdown.accessories.toInt()}', isDark),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Quick Action Buttons
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => ExpensesScreen(filterProductId: currentProduct.id),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.add, size: 16),
-                    label: Text(
-                      AppTranslations.tr('addServiceLog', lang),
-                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
                     ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => ClaimsScreen(preselectedProductId: currentProduct.id),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.shield_outlined, size: 16),
-                    label: Text(
-                      AppTranslations.tr('claimWarranty', lang),
-                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      side: const BorderSide(color: AppTheme.primary),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-
-            // Specifications & Warranty Grid
-            Text(
-              'Warranty & Purchase Details',
-              style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: isDark ? AppTheme.surfaceDark : AppTheme.surfaceLight,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: isDark ? const Color(0xFF334155) : AppTheme.borderLight,
-                ),
-              ),
-              child: Column(
-                children: [
-                  _buildDetailRow('Warranty Period', currentProduct.warrantyPeriod, isDark),
-                  const Divider(height: 16),
-                  _buildDetailRow('Warranty End Date', currentProduct.warrantyEndDate, isDark),
-                  const Divider(height: 16),
-                  _buildDetailRow(
-                    'Days Remaining',
-                    '${currentProduct.daysRemaining} days left',
-                    isDark,
-                    highlightColor: statusColor,
-                  ),
-                  const Divider(height: 16),
-                  _buildDetailRow('Purchase Date', currentProduct.purchaseDate, isDark),
-                  const Divider(height: 16),
-                  _buildDetailRow('Purchase Price', '₹${currentProduct.purchasePrice.toInt()}', isDark),
-                  const Divider(height: 16),
-                  _buildDetailRow('Invoice Number', currentProduct.invoiceNumber, isDark),
-                  const Divider(height: 16),
-                  _buildDetailRow('Seller / Store', currentProduct.sellerName, isDark),
-                  if (currentProduct.sellerContact.isNotEmpty) ...[
-                    const Divider(height: 16),
-                    _buildDetailRow('Seller Contact', currentProduct.sellerContact, isDark),
-                  ],
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // QR Code Asset Passport Section
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: isDark ? AppTheme.surfaceDark : AppTheme.surfaceLight,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: isDark ? const Color(0xFF334155) : AppTheme.borderLight,
-                ),
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        AppTranslations.tr('qrPassport', lang),
-                        style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    Positioned(
+                      top: 12,
+                      right: 12,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: AppTheme.primary.withAlpha(25),
-                          borderRadius: BorderRadius.circular(10),
+                          color: statusColor,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: statusColor.withAlpha(100),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                         ),
-                        child: const Text(
-                          'Verified Digital ID',
-                          style: TextStyle(color: AppTheme.primary, fontSize: 9.5, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Center(
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withAlpha(20),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
+                        child: Text(
+                          currentProduct.warrantyStatus,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
                           ),
-                        ],
-                      ),
-                      child: QrImageView(
-                        data: 'https://mydigi.app/verify/${currentProduct.id}?serial=${currentProduct.serialNumber}',
-                        version: QrVersions.auto,
-                        size: 150.0,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    AppTranslations.tr('qrPassportSub', lang),
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: isDark ? AppTheme.textMutedDark : AppTheme.textMutedLight,
+                    Positioned(
+                      top: 12,
+                      left: 12,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withAlpha(165),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          currentProduct.category,
+                          style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                        ),
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Service & Expense History Section
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  AppTranslations.tr('expenseHistory', lang),
-                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16),
+                  ],
                 ),
+                const SizedBox(height: 16),
+
+                // 2. Product Name & Brand Info
                 Text(
-                  '${productExpenses.length} logs',
+                  currentProduct.name,
+                  style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${currentProduct.brand} • Model: ${currentProduct.modelNumber} • Serial: ${currentProduct.serialNumber}',
                   style: TextStyle(
                     fontSize: 12,
                     color: isDark ? AppTheme.textMutedDark : AppTheme.textMutedLight,
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            if (productExpenses.isEmpty)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: isDark ? AppTheme.surfaceDark : AppTheme.surfaceLight,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Center(
-                  child: Text(
-                    lang == 'en' ? 'No service or repair expenses logged yet' : 'कोई खर्च रिकॉर्ड नहीं मिला',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: isDark ? AppTheme.textMutedDark : AppTheme.textMutedLight,
-                    ),
-                  ),
-                ),
-              )
-            else
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: productExpenses.length,
-                itemBuilder: (context, idx) {
-                  final exp = productExpenses[idx];
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: isDark ? AppTheme.surfaceDark : AppTheme.surfaceLight,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: isDark ? const Color(0xFF334155) : AppTheme.borderLight,
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              exp.category,
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5),
-                            ),
-                            Text(
-                              '${exp.date} • ${exp.serviceProvider}',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: isDark ? AppTheme.textMutedDark : AppTheme.textMutedLight,
-                              ),
-                            ),
-                          ],
-                        ),
-                        Text(
-                          '₹${exp.amount.toInt()}',
-                          style: GoogleFonts.outfit(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                            color: AppTheme.danger,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            const SizedBox(height: 20),
+                const SizedBox(height: 16),
 
-            // Attached Documents & Invoices Section
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  AppTranslations.tr('attachedDocs', lang),
-                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16),
-                ),
-                TextButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const InvoiceVaultScreen()),
-                    );
-                  },
-                  child: Text(
-                    AppTranslations.tr('viewAll', lang),
-                    style: const TextStyle(fontSize: 12, color: AppTheme.primary),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            if (productDocs.isEmpty)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: isDark ? AppTheme.surfaceDark : AppTheme.surfaceLight,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Center(
-                  child: Text(
-                    lang == 'en' ? 'No invoices attached' : 'कोई बिल संलग्न नहीं है',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: isDark ? AppTheme.textMutedDark : AppTheme.textMutedLight,
-                    ),
-                  ),
-                ),
-              )
-            else
-              ...productDocs.map(
-                (doc) => Container(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: isDark ? AppTheme.surfaceDark : AppTheme.surfaceLight,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: isDark ? const Color(0xFF334155) : AppTheme.borderLight,
-                    ),
-                  ),
-                  child: Row(
+                // 3. Glassy Total Cost of Ownership (TCO) Card
+                GlassCard(
+                  borderRadius: 22,
+                  padding: const EdgeInsets.all(16),
+                  tintColor: const Color(0xFF6366F1),
+                  opacity: 0.86,
+                  blur: 24,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: AppTheme.primary.withAlpha(25),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(Icons.picture_as_pdf, color: AppTheme.primary, size: 20),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              doc.name,
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            Text(
-                              '${doc.type} • ${doc.size} • ${doc.uploadDate}',
-                              style: TextStyle(
-                                fontSize: 10.5,
-                                color: isDark ? AppTheme.textMutedDark : AppTheme.textMutedLight,
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                AppTranslations.tr('costOfOwnership', lang),
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                               ),
+                              Text(
+                                isHindi ? 'खरीद + सर्विस + मेंटेनेंस + AMC' : 'Purchase + Service + Maintenance + AMC',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: isDark ? AppTheme.textMutedDark : AppTheme.textMutedLight,
+                                ),
+                              ),
+                            ],
+                          ),
+                          Text(
+                            '₹${currentProduct.totalCostOfOwnership.toInt()}',
+                            style: GoogleFonts.outfit(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w900,
+                              color: AppTheme.primary,
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.download_rounded, size: 20, color: AppTheme.primary),
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Downloading ${doc.name}...'),
-                              duration: const Duration(seconds: 1),
-                            ),
-                          );
-                        },
+                      const SizedBox(height: 12),
+                      Divider(height: 1, color: isDark ? Colors.white.withAlpha(20) : Colors.black.withAlpha(15)),
+                      const SizedBox(height: 12),
+                      // Breakdown Row
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 8,
+                        children: [
+                          _buildTcoPill('Purchase', '₹${currentProduct.purchasePrice.toInt()}', isDark),
+                          _buildTcoPill('Maintenance', '₹${currentProduct.costBreakdown.maintenance.toInt()}', isDark),
+                          _buildTcoPill('Repair', '₹${currentProduct.costBreakdown.repair.toInt()}', isDark),
+                          _buildTcoPill('AMC', '₹${currentProduct.costBreakdown.amc.toInt()}', isDark),
+                          _buildTcoPill('Accessories', '₹${currentProduct.costBreakdown.accessories.toInt()}', isDark),
+                        ],
                       ),
                     ],
                   ),
                 ),
-              ),
-            const SizedBox(height: 30),
-          ],
+                const SizedBox(height: 16),
+
+                // 4. Quick Action Buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ExpensesScreen(filterProductId: currentProduct.id),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.add, size: 16),
+                        label: Text(
+                          AppTranslations.tr('addServiceLog', lang),
+                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const ClaimsScreen(),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.shield_outlined, size: 16),
+                        label: Text(
+                          AppTranslations.tr('claimWarranty', lang),
+                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppTheme.primary,
+                          side: const BorderSide(color: AppTheme.primary),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // 5. Glassy Purchase & Warranty Specs Card
+                GlassCard(
+                  borderRadius: 22,
+                  padding: const EdgeInsets.all(16),
+                  opacity: 0.82,
+                  blur: 24,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Warranty & Invoice Details',
+                        style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14),
+                      ),
+                      const SizedBox(height: 12),
+                      _buildDetailRow('Warranty Period', currentProduct.warrantyPeriod, isDark),
+                      const Divider(height: 16),
+                      _buildDetailRow('Warranty End Date', currentProduct.warrantyEndDate, isDark),
+                      const Divider(height: 16),
+                      _buildDetailRow('Days Remaining', '${currentProduct.daysRemaining} days', isDark, valueColor: statusColor),
+                      const Divider(height: 16),
+                      _buildDetailRow('Purchase Date', currentProduct.purchaseDate, isDark),
+                      const Divider(height: 16),
+                      _buildDetailRow('Purchase Price', '₹${currentProduct.purchasePrice.toInt()}', isDark),
+                      const Divider(height: 16),
+                      _buildDetailRow('Invoice Number', currentProduct.invoiceNumber, isDark),
+                      const Divider(height: 16),
+                      _buildDetailRow('Seller / Store', currentProduct.sellerName, isDark),
+                      if (currentProduct.sellerContact.isNotEmpty) ...[
+                        const Divider(height: 16),
+                        _buildDetailRow('Seller Contact', currentProduct.sellerContact, isDark),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // 6. QR Code Asset Passport Section
+                GlassCard(
+                  borderRadius: 22,
+                  padding: const EdgeInsets.all(16),
+                  opacity: 0.82,
+                  blur: 24,
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            AppTranslations.tr('qrPassport', lang),
+                            style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primary.withAlpha(25),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Text(
+                              'Verified Digital ID',
+                              style: TextStyle(color: AppTheme.primary, fontSize: 9.5, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Center(
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(18),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withAlpha(30),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: QrImageView(
+                            data: 'MYDIGI:${currentProduct.id}:${currentProduct.serialNumber}',
+                            version: QrVersions.auto,
+                            size: 140.0,
+                            eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: AppTheme.primary),
+                            dataModuleStyle: const QrDataModuleStyle(dataModuleShape: QrDataModuleShape.square, color: AppTheme.primary),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        'Show this QR code to authorized service technician for instant warranty validation.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          color: isDark ? AppTheme.textMutedDark : AppTheme.textMutedLight,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // 7. Attached Documents Section
+                GlassCard(
+                  borderRadius: 22,
+                  padding: const EdgeInsets.all(16),
+                  opacity: 0.82,
+                  blur: 24,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            AppTranslations.tr('attachedDocs', lang),
+                            style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => const InvoiceVaultScreen()),
+                              );
+                            },
+                            child: const Text('Open Vault', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      if (productDocs.isEmpty)
+                        Text(
+                          'No documents attached yet. Invoices from bill scans will appear here.',
+                          style: TextStyle(fontSize: 11, color: isDark ? AppTheme.textMutedDark : AppTheme.textMutedLight),
+                        )
+                      else
+                        ...productDocs.map(
+                          (doc) => Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: isDark ? const Color(0xFF334155) : AppTheme.borderLight),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.picture_as_pdf, color: AppTheme.danger, size: 22),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(doc.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                                      Text('${doc.size} • Uploaded ${doc.uploadDate}', style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                                    ],
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.download, size: 18),
+                                  onPressed: () {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Downloading ${doc.name}...')),
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // 8. Expense & Maintenance History
+                GlassCard(
+                  borderRadius: 22,
+                  padding: const EdgeInsets.all(16),
+                  opacity: 0.82,
+                  blur: 24,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        AppTranslations.tr('expenseHistory', lang),
+                        style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14),
+                      ),
+                      const SizedBox(height: 10),
+                      if (productExpenses.isEmpty)
+                        Text(
+                          'No maintenance or service logs recorded for this product yet.',
+                          style: TextStyle(fontSize: 11, color: isDark ? AppTheme.textMutedDark : AppTheme.textMutedLight),
+                        )
+                      else
+                        ...productExpenses.map(
+                          (exp) => Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('${exp.category} (${exp.serviceProvider})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                                    Text(exp.date, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                                  ],
+                                ),
+                                Text(
+                                  '₹${exp.amount.toInt()}',
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.danger),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 100),
+              ],
+            ),
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildTcoPill(String label, String value, bool isDark) {
+  Widget _buildTcoPill(String title, String amount, bool isDark) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF0F172A) : Colors.white,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        '$label: $value',
-        style: TextStyle(
-          fontSize: 10.5,
-          fontWeight: FontWeight.w600,
-          color: isDark ? Colors.white70 : AppTheme.textMainLight,
+        color: isDark ? const Color(0xFF334155) : Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: isDark ? const Color(0xFF475569) : AppTheme.borderLight,
         ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text('$title: ', style: const TextStyle(fontSize: 10, color: Colors.grey)),
+          Text(amount, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+        ],
       ),
     );
   }
 
-  Widget _buildDetailRow(String label, String value, bool isDark, {Color? highlightColor}) {
+  Widget _buildDetailRow(String label, String value, bool isDark, {Color? valueColor}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -608,52 +545,38 @@ class ProductDetailScreen extends StatelessWidget {
         Text(
           value,
           style: TextStyle(
-            fontSize: 12,
             fontWeight: FontWeight.bold,
-            color: highlightColor ?? (isDark ? Colors.white : AppTheme.textMainLight),
+            fontSize: 12,
+            color: valueColor ?? (isDark ? Colors.white : AppTheme.textMainLight),
           ),
         ),
       ],
     );
   }
 
-  void _showDeleteConfirmDialog(
-    BuildContext context,
-    WarrantyProvider provider,
-    ProductItem prod,
-    String lang,
-  ) {
+  void _showDeleteConfirmDialog(BuildContext context, WarrantyProvider provider, ProductItem product, String lang) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(lang == 'en' ? 'Delete Product?' : 'प्रोडक्ट हटाएं?'),
-        content: Text(
-          lang == 'en'
-              ? 'Are you sure you want to delete "${prod.name}" and all associated expenses and documents?'
-              : 'क्या आप "${prod.name}" और उससे जुड़े सभी खर्चे व बिल हटाना चाहते हैं?',
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Delete Product?'),
+        content: Text('Are you sure you want to remove ${product.name}? All attached invoices and warranty logs will be archived.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text(AppTranslations.tr('cancel', lang)),
+            child: const Text('Cancel'),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger),
             onPressed: () {
-              provider.deleteProduct(prod.id);
-              Navigator.pop(ctx); // close dialog
-              Navigator.pop(context); // close details screen
+              provider.deleteProduct(product.id);
+              Navigator.pop(ctx); // Close dialog
+              Navigator.pop(context); // Go back to products list
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(lang == 'en' ? 'Product deleted' : 'प्रोडक्ट हटा दिया गया'),
-                  backgroundColor: AppTheme.danger,
-                ),
+                const SnackBar(content: Text('Product deleted successfully')),
               );
             },
-            child: Text(
-              AppTranslations.tr('deleteProduct', lang),
-              style: const TextStyle(color: Colors.white),
-            ),
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger, foregroundColor: Colors.white),
+            child: const Text('Delete'),
           ),
         ],
       ),

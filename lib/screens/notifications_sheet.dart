@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../providers/warranty_provider.dart';
 import '../utils/app_theme.dart';
 import '../utils/translations.dart';
+import '../widgets/glass_container.dart';
 import 'product_detail_screen.dart';
 
 class NotificationsSheet extends StatelessWidget {
@@ -15,153 +16,175 @@ class NotificationsSheet extends StatelessWidget {
     final lang = provider.language;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.7,
-      decoration: BoxDecoration(
-        color: isDark ? AppTheme.surfaceDark : AppTheme.surfaceLight,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      child: Column(
-        children: [
-          // Drag Handle
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.only(top: 12, bottom: 8),
-              decoration: BoxDecoration(
-                color: Colors.grey.withAlpha(80),
-                borderRadius: BorderRadius.circular(4),
+    return GlassCard(
+      borderRadius: 28,
+      padding: EdgeInsets.zero,
+      opacity: 0.94,
+      blur: 28,
+      child: SizedBox(
+        height: MediaQuery.of(context).size.height * 0.7,
+        child: Column(
+          children: [
+            // Drag Handle
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(top: 12, bottom: 8),
+                decoration: BoxDecoration(
+                  color: Colors.grey.withAlpha(80),
+                  borderRadius: BorderRadius.circular(4),
+                ),
               ),
             ),
-          ),
 
-          // Header
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      AppTranslations.tr('notifications', lang),
-                      style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18),
-                    ),
-                    if (provider.unreadNotificationsCount > 0) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: AppTheme.danger,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text(
-                          '${provider.unreadNotificationsCount} New',
-                          style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-                TextButton(
-                  onPressed: () => provider.markAllNotificationsAsRead(),
-                  child: Text(
-                    AppTranslations.tr('markAllRead', lang),
-                    style: const TextStyle(fontSize: 11.5, color: AppTheme.primary),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const Divider(height: 1),
-
-          // Notification Items
-          Expanded(
-            child: ListView.builder(
+            // Header
+            Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              itemCount: provider.notifications.length,
-              itemBuilder: (context, idx) {
-                final notif = provider.notifications[idx];
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 10),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: notif.unread
-                        ? (isDark ? AppTheme.primary.withAlpha(40) : AppTheme.primaryLight)
-                        : (isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC)),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: notif.unread ? AppTheme.primary.withAlpha(80) : (isDark ? const Color(0xFF334155) : AppTheme.borderLight),
-                    ),
-                  ),
-                  child: InkWell(
-                    onTap: () {
-                      provider.markNotificationAsRead(notif.id);
-                      if (notif.productId != null) {
-                        final p = provider.products.firstWhere(
-                          (prod) => prod.id == notif.productId,
-                          orElse: () => provider.products.first,
-                        );
-                        Navigator.pop(context); // close sheet
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => ProductDetailScreen(product: p),
-                          ),
-                        );
-                      }
-                    },
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        AppTranslations.tr('notifications', lang),
+                        style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18),
+                      ),
+                      if (provider.unreadNotificationsCount > 0) ...[
+                        const SizedBox(width: 8),
                         Container(
-                          padding: const EdgeInsets.all(8),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
-                            color: AppTheme.primary.withAlpha(25),
+                            color: AppTheme.danger,
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: Icon(
-                            notif.type == 'expiry'
-                                ? Icons.warning_amber_rounded
-                                : (notif.type == 'amc' ? Icons.shield_outlined : Icons.receipt_long),
-                            color: notif.type == 'expiry' ? AppTheme.warning : AppTheme.primary,
-                            size: 20,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                notif.title,
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                              ),
-                              const SizedBox(height: 3),
-                              Text(
-                                notif.message,
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: isDark ? AppTheme.textMutedDark : AppTheme.textMutedLight,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                notif.date,
-                                style: const TextStyle(fontSize: 9.5, color: Colors.grey),
-                              ),
-                            ],
+                          child: Text(
+                            '${provider.unreadNotificationsCount} New',
+                            style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
                           ),
                         ),
                       ],
-                    ),
+                    ],
                   ),
-                );
-              },
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+            const Divider(height: 1),
+
+            // Notifications List
+            Expanded(
+              child: provider.notifications.isEmpty
+                  ? Center(
+                      child: Text(
+                        'No notifications',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark ? AppTheme.textMutedDark : AppTheme.textMutedLight,
+                        ),
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      itemCount: provider.notifications.length,
+                      itemBuilder: (context, index) {
+                        final notif = provider.notifications[index];
+                        final isUnread = notif.unread;
+
+                        Color typeColor = AppTheme.primary;
+                        IconData typeIcon = Icons.info_outline;
+                        if (notif.type == 'critical') {
+                          typeColor = AppTheme.danger;
+                          typeIcon = Icons.error_outline;
+                        } else if (notif.type == 'warning') {
+                          typeColor = AppTheme.warning;
+                          typeIcon = Icons.warning_amber_rounded;
+                        } else if (notif.type == 'success') {
+                          typeColor = AppTheme.success;
+                          typeIcon = Icons.check_circle_outline;
+                        }
+
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          decoration: BoxDecoration(
+                            color: isUnread
+                                ? (isDark ? const Color(0xFF1E293B) : const Color(0xFFEEF2FF))
+                                : (isDark ? const Color(0xFF0F172A).withAlpha(120) : Colors.white.withAlpha(160)),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: isUnread ? typeColor.withAlpha(80) : Colors.transparent,
+                            ),
+                          ),
+                          child: ListTile(
+                            onTap: () {
+                              provider.markNotificationAsRead(notif.id);
+                              if (notif.productId != null) {
+                                final product = provider.products.firstWhere(
+                                  (p) => p.id == notif.productId,
+                                  orElse: () => provider.products.first,
+                                );
+                                Navigator.pop(context);
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => ProductDetailScreen(product: product),
+                                  ),
+                                );
+                              }
+                            },
+                            leading: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: typeColor.withAlpha(25),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Icon(typeIcon, color: typeColor, size: 20),
+                            ),
+                            title: Text(
+                              notif.title,
+                              style: TextStyle(
+                                fontWeight: isUnread ? FontWeight.bold : FontWeight.w600,
+                                fontSize: 13,
+                              ),
+                            ),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const SizedBox(height: 2),
+                                Text(
+                                  notif.message,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: isDark ? AppTheme.textMutedDark : AppTheme.textMutedLight,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  notif.date,
+                                  style: const TextStyle(fontSize: 9.5, color: Colors.grey),
+                                ),
+                              ],
+                            ),
+                            trailing: isUnread
+                                ? Container(
+                                    width: 8,
+                                    height: 8,
+                                    decoration: const BoxDecoration(
+                                      color: AppTheme.primary,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  )
+                                : null,
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }
