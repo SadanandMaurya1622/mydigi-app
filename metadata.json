@@ -1,0 +1,6 @@
+{
+  "name": "WarrantyX",
+  "description": "All-in-one Product, Warranty, Expense, Service, Invoice and Home Asset Management mobile application. Apne har product ka kharcha aur warranty, ek hi app mein.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
