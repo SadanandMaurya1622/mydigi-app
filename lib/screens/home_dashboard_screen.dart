@@ -300,29 +300,34 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                               ),
                               const SizedBox(width: 12),
                               Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      isHindi
-                                          ? 'सैमसंग एसी की वारंटी 7 दिनों में समाप्त!'
-                                          : 'Samsung AC Warranty Ends in 7 Days!',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                    Text(
-                                      isHindi
-                                          ? 'मुफ़्त वार्षिक सर्विस क्लेम करें या AMC रीन्यू कराएं।'
-                                          : 'Claim free annual service or renew AMC today.',
-                                      style: const TextStyle(
-                                        color: Colors.white70,
-                                        fontSize: 11,
-                                      ),
-                                    ),
-                                  ],
+                                child: Builder(
+                                  builder: (_) {
+                                    final expiringProd = provider.products.where((p) => p.daysRemaining <= 7).firstOrNull ?? provider.products.first;
+                                    return Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          isHindi
+                                              ? '${expiringProd.name} की वारंटी ${expiringProd.daysRemaining} दिनों में समाप्त!'
+                                              : '${expiringProd.name} Warranty Ends in ${expiringProd.daysRemaining} Days!',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                        Text(
+                                          isHindi
+                                              ? 'मुफ़्त वार्षिक सर्विस क्लेम करें या AMC रीन्यू कराएं।'
+                                              : 'Claim free annual service or renew AMC today.',
+                                          style: const TextStyle(
+                                            color: Colors.white70,
+                                            fontSize: 11,
+                                          ),
+                                        ),
+                                      ],
+                                    );
+                                  },
                                 ),
                               ),
                             ],
@@ -333,10 +338,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                             children: [
                               ElevatedButton.icon(
                                 onPressed: () {
-                                  final acProduct = provider.products.firstWhere(
-                                    (p) => p.daysRemaining <= 7,
-                                    orElse: () => provider.products.first,
-                                  );
+                                  final acProduct = provider.products.where((p) => p.daysRemaining <= 7).firstOrNull ?? provider.products.first;
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
@@ -487,20 +489,48 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                   if (filteredProducts.isEmpty)
                     GlassCard(
                       borderRadius: 20,
-                      padding: const EdgeInsets.all(28),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
                       child: Column(
                         children: [
-                          Icon(Icons.search_off_rounded, size: 42, color: isDark ? Colors.white38 : Colors.black38),
-                          const SizedBox(height: 8),
-                          Text(
-                            isHindi ? 'कोई प्रोडक्ट नहीं मिला' : 'No matching products found',
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                          Icon(
+                            provider.products.isEmpty ? Icons.inventory_2_outlined : Icons.search_off_rounded,
+                            size: 46,
+                            color: AppTheme.primary.withAlpha(180),
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 12),
                           Text(
-                            isHindi ? 'कृपया सर्च टर्म बदलें या नया प्रोडक्ट जोड़ें।' : 'Try changing your search or add a new item.',
+                            provider.products.isEmpty
+                                ? (isHindi ? 'आपका वॉल्ट खाली है' : 'Your Vault is Empty')
+                                : (isHindi ? 'कोई प्रोडक्ट नहीं मिला' : 'No matching products found'),
+                            style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            provider.products.isEmpty
+                                ? (isHindi
+                                    ? 'Firebase पर अपने प्रोडक्ट्स, वारंटी और बिल सुरक्षित रखने के लिए पहला प्रोडक्ट जोड़ें।'
+                                    : 'Add your first product, warranty and bill to save it in Firebase Cloud.')
+                                : (isHindi ? 'कृपया सर्च टर्म बदलें या फ़िल्टर हटाएं।' : 'Try changing your search query or status filter.'),
+                            textAlign: TextAlign.center,
                             style: TextStyle(fontSize: 12, color: isDark ? AppTheme.textMutedDark : AppTheme.textMutedLight),
                           ),
+                          if (provider.products.isEmpty) ...[
+                            const SizedBox(height: 18),
+                            ElevatedButton.icon(
+                              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddProductScreen())),
+                              icon: const Icon(Icons.add_rounded, size: 18),
+                              label: Text(
+                                isHindi ? '+ नया प्रोडक्ट जोड़ें' : '+ Add First Product',
+                                style: const TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppTheme.primary,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     )

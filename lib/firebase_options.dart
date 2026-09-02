@@ -42,37 +42,41 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyMyDigiWebKey740310683452A2402Project',
+    apiKey: 'AIzaSyARl2RiH5unUSiybyo6kYBoNxnu6t5DwLc',
     appId: '1:740310683452:web:a1b2c3d4e5f6g7h8i9j0k1',
     messagingSenderId: '740310683452',
     projectId: 'mydigi-a2402',
     authDomain: 'mydigi-a2402.firebaseapp.com',
-    storageBucket: 'mydigi-a2402.appspot.com',
+    databaseURL: 'https://mydigi-a2402-default-rtdb.firebaseio.com',
+    storageBucket: 'mydigi-a2402.firebasestorage.app',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyMyDigiAndroidKey740310683452A2402',
-    appId: '1:740310683452:android:694f58c49e5d4821a2402b',
+    apiKey: 'AIzaSyARl2RiH5unUSiybyo6kYBoNxnu6t5DwLc',
+    appId: '1:740310683452:android:e1a2907a0d02af68ee9839',
     messagingSenderId: '740310683452',
     projectId: 'mydigi-a2402',
-    storageBucket: 'mydigi-a2402.appspot.com',
+    databaseURL: 'https://mydigi-a2402-default-rtdb.firebaseio.com',
+    storageBucket: 'mydigi-a2402.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyMyDigiIosKey740310683452A2402Proj',
+    apiKey: 'AIzaSyARl2RiH5unUSiybyo6kYBoNxnu6t5DwLc',
     appId: '1:740310683452:ios:78324e931ca8b271a2402c',
     messagingSenderId: '740310683452',
     projectId: 'mydigi-a2402',
-    storageBucket: 'mydigi-a2402.appspot.com',
-    iosBundleId: 'com.warrantyx.app.warrantyxApp',
+    databaseURL: 'https://mydigi-a2402-default-rtdb.firebaseio.com',
+    storageBucket: 'mydigi-a2402.firebasestorage.app',
+    iosBundleId: 'com.mydigi.app',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyMyDigiIosKey740310683452A2402Proj',
+    apiKey: 'AIzaSyARl2RiH5unUSiybyo6kYBoNxnu6t5DwLc',
     appId: '1:740310683452:ios:78324e931ca8b271a2402c',
     messagingSenderId: '740310683452',
     projectId: 'mydigi-a2402',
-    storageBucket: 'mydigi-a2402.appspot.com',
-    iosBundleId: 'com.warrantyx.app.warrantyxApp',
+    databaseURL: 'https://mydigi-a2402-default-rtdb.firebaseio.com',
+    storageBucket: 'mydigi-a2402.firebasestorage.app',
+    iosBundleId: 'com.mydigi.app',
   );
 }

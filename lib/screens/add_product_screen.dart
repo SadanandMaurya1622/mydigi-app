@@ -59,6 +59,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
   void initState() {
     super.initState();
     final p = widget.editingProduct;
+    final now = DateTime.now();
 
     _nameController = TextEditingController(text: p?.name ?? '');
     _brandController = TextEditingController(text: p?.brand ?? '');
@@ -67,7 +68,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
     _priceController = TextEditingController(text: p != null ? p.purchasePrice.toInt().toString() : '');
     _sellerController = TextEditingController(text: p?.sellerName ?? '');
     _sellerContactController = TextEditingController(text: p?.sellerContact ?? '');
-    _invoiceNoController = TextEditingController(text: p?.invoiceNumber ?? 'INV-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}');
+    _invoiceNoController = TextEditingController(text: p?.invoiceNumber ?? 'INV-${now.millisecondsSinceEpoch.toString().substring(7)}');
     _warrantyPeriodController = TextEditingController(text: p?.warrantyPeriod ?? '1 Year');
     _imageUrlController = TextEditingController(text: p?.imageUrl ?? _sampleImages.first);
     _notesController = TextEditingController(text: p?.notes ?? '');
@@ -78,6 +79,10 @@ class _AddProductScreenState extends State<AddProductScreen> {
       _warrantyEndDate = p.warrantyEndDate;
       _extendedWarranty = p.extendedWarranty;
       _hasAMC = p.hasAMC;
+    } else {
+      _purchaseDate = '${now.day} ${_monthName(now.month)} ${now.year}';
+      final nextYear = DateTime(now.year + 1, now.month, now.day);
+      _warrantyEndDate = '${nextYear.day} ${_monthName(nextYear.month)} ${nextYear.year}';
     }
   }
 
@@ -103,6 +108,20 @@ class _AddProductScreenState extends State<AddProductScreen> {
     final provider = Provider.of<WarrantyProvider>(context, listen: false);
     final price = double.tryParse(_priceController.text.trim()) ?? 0.0;
 
+    int daysLeft = 365;
+    try {
+      final parts = _warrantyEndDate.split(' ');
+      if (parts.length == 3) {
+        final day = int.tryParse(parts[0]) ?? 1;
+        final month = _monthIndex(parts[1]);
+        final year = int.tryParse(parts[2]) ?? (DateTime.now().year + 1);
+        final endDt = DateTime(year, month, day);
+        daysLeft = endDt.difference(DateTime.now()).inDays;
+      }
+    } catch (_) {}
+
+    final status = daysLeft < 0 ? 'Expired' : (daysLeft <= 30 ? 'Expiring Soon' : 'Active');
+
     final newProduct = ProductItem(
       id: widget.editingProduct?.id ?? 'prod-${DateTime.now().millisecondsSinceEpoch}',
       name: _nameController.text.trim(),
@@ -118,8 +137,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
       warrantyPeriod: _warrantyPeriodController.text.trim(),
       warrantyStartDate: _purchaseDate,
       warrantyEndDate: _warrantyEndDate,
-      warrantyStatus: 'Active',
-      daysRemaining: 365,
+      warrantyStatus: status,
+      daysRemaining: daysLeft < 0 ? 0 : daysLeft,
       extendedWarranty: _extendedWarranty,
       hasAMC: _hasAMC,
       imageUrl: _imageUrlController.text.trim().isNotEmpty ? _imageUrlController.text.trim() : _sampleImages.first,
@@ -130,7 +149,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
     if (widget.editingProduct != null) {
       provider.updateProduct(newProduct);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Product updated successfully!'), backgroundColor: AppTheme.success),
+        const SnackBar(content: Text('✅ Product updated successfully!'), backgroundColor: AppTheme.success),
       );
     } else {
       provider.addProduct(newProduct);
@@ -550,5 +569,11 @@ class _AddProductScreenState extends State<AddProductScreen> {
   String _monthName(int month) {
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     return months[month - 1];
+  }
+
+  int _monthIndex(String name) {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    final idx = months.indexOf(name);
+    return idx != -1 ? idx + 1 : 1;
   }
 }

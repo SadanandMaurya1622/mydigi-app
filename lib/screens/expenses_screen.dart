@@ -6,6 +6,7 @@ import '../providers/warranty_provider.dart';
 import '../utils/app_theme.dart';
 import '../utils/translations.dart';
 import '../widgets/glass_container.dart';
+import 'add_product_screen.dart';
 
 class ExpensesScreen extends StatefulWidget {
   final String? filterProductId;
@@ -30,187 +31,250 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
   ];
 
   void _showAddExpenseModal(BuildContext context, WarrantyProvider provider, String lang, bool isDark) {
-    String selectedProdId = widget.filterProductId ?? (provider.products.isNotEmpty ? provider.products.first.id : '');
+    if (provider.products.isEmpty) {
+      showModalBottomSheet(
+        context: context,
+        backgroundColor: Colors.transparent,
+        builder: (ctx) => SafeArea(
+          child: GlassCard(
+            borderRadius: 28,
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.inventory_2_outlined, size: 48, color: AppTheme.primary),
+                const SizedBox(height: 14),
+                Text(
+                  lang == 'hi' ? 'पहले एक प्रोडक्ट जोड़ें' : 'Add a Product First',
+                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  lang == 'hi'
+                      ? 'खर्चा किसी प्रोडक्ट (जैसे AC, टीवी, फ्रिज) से जुड़ा होता है। कृपया पहले एक प्रोडक्ट जोड़ें।'
+                      : 'Expenses are linked to products (AC, TV, Vehicle, etc.). Please add a product first.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    color: isDark ? AppTheme.textMutedDark : AppTheme.textMutedLight,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const AddProductScreen()));
+                  },
+                  icon: const Icon(Icons.add_rounded),
+                  label: Text(lang == 'hi' ? '+ नया प्रोडक्ट जोड़ें' : '+ Add New Product', style: const TextStyle(fontWeight: FontWeight.bold)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primary,
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(double.infinity, 48),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      return;
+    }
+
+    final validProductIds = provider.products.map((p) => p.id).toSet();
+    String selectedProdId = (widget.filterProductId != null && validProductIds.contains(widget.filterProductId))
+        ? widget.filterProductId!
+        : provider.products.first.id;
     String selectedCat = 'Maintenance';
     final amountController = TextEditingController();
-    final providerController = TextEditingController(text: 'Urban Company Service Pro');
+    final providerController = TextEditingController(text: 'Authorized Service Center');
     final notesController = TextEditingController();
-    String dateStr = '01 Sep 2026';
+    final now = DateTime.now();
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    String dateStr = '${now.day} ${months[now.month - 1]} ${now.year}';
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setModalState) => GlassCard(
-          borderRadius: 28,
-          opacity: 0.92,
-          blur: 28,
-          margin: EdgeInsets.only(
-            bottom: MediaQuery.of(ctx).viewInsets.bottom,
-          ),
-          padding: const EdgeInsets.all(22),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        builder: (modalCtx, setModalState) => SafeArea(
+          child: GlassCard(
+            borderRadius: 28,
+            opacity: 0.92,
+            blur: 28,
+            margin: EdgeInsets.only(
+              bottom: MediaQuery.of(modalCtx).viewInsets.bottom,
+            ),
+            padding: const EdgeInsets.all(22),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Log New Expense', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18)),
-                  IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(ctx)),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // Product Picker Dropdown
-              const Text('Select Product', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: selectedProdId.isNotEmpty ? selectedProdId : null,
-                    isExpanded: true,
-                    items: provider.products
-                        .map((p) => DropdownMenuItem(value: p.id, child: Text(p.name, style: const TextStyle(fontSize: 13), overflow: TextOverflow.ellipsis)))
-                        .toList(),
-                    onChanged: (val) {
-                      if (val != null) setModalState(() => selectedProdId = val);
-                    },
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(lang == 'hi' ? 'नया खर्चा जोड़ें' : 'Log New Expense', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18)),
+                      IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(modalCtx)),
+                    ],
                   ),
-                ),
-              ),
-              const SizedBox(height: 12),
+                  const SizedBox(height: 16),
 
-              // Amount & Date Row
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Amount (₹) *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 6),
-                        TextField(
-                          controller: amountController,
-                          keyboardType: TextInputType.number,
-                          decoration: InputDecoration(
-                            hintText: 'e.g. 1500',
-                            filled: true,
-                            fillColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                          ),
-                        ),
-                      ],
+                  // Product Picker Dropdown
+                  Text(lang == 'hi' ? 'प्रोडक्ट चुनें' : 'Select Product', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: selectedProdId,
+                        isExpanded: true,
+                        items: provider.products
+                            .map((p) => DropdownMenuItem(value: p.id, child: Text(p.name, style: const TextStyle(fontSize: 13), overflow: TextOverflow.ellipsis)))
+                            .toList(),
+                        onChanged: (val) {
+                          if (val != null) setModalState(() => selectedProdId = val);
+                        },
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Expense Type', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          decoration: BoxDecoration(
-                            color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: DropdownButtonHideUnderline(
-                            child: DropdownButton<String>(
-                              value: selectedCat,
-                              isExpanded: true,
-                              items: ['Maintenance', 'Service', 'AMC', 'Repair', 'Accessories', 'Other']
-                                  .map((c) => DropdownMenuItem(value: c, child: Text(c, style: const TextStyle(fontSize: 13))))
-                                  .toList(),
-                              onChanged: (val) {
-                                if (val != null) setModalState(() => selectedCat = val);
-                              },
+                  const SizedBox(height: 12),
+
+                  // Amount & Date Row
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(lang == 'hi' ? 'राशि (₹) *' : 'Amount (₹) *', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 6),
+                            TextField(
+                              controller: amountController,
+                              keyboardType: TextInputType.number,
+                              decoration: InputDecoration(
+                                hintText: 'e.g. 1500',
+                                filled: true,
+                                fillColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              ),
                             ),
-                          ),
+                          ],
                         ),
-                      ],
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(lang == 'hi' ? 'खर्च का प्रकार' : 'Expense Type', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              decoration: BoxDecoration(
+                                color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: DropdownButtonHideUnderline(
+                                child: DropdownButton<String>(
+                                  value: selectedCat,
+                                  isExpanded: true,
+                                  items: ['Maintenance', 'Service', 'AMC', 'Repair', 'Accessories', 'Other']
+                                      .map((c) => DropdownMenuItem(value: c, child: Text(c, style: const TextStyle(fontSize: 13))))
+                                      .toList(),
+                                  onChanged: (val) {
+                                    if (val != null) setModalState(() => selectedCat = val);
+                                  },
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Service Provider
+                  Text(lang == 'hi' ? 'सर्विस सेंटर / मैकेनिक' : 'Service Provider / Store', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: providerController,
+                    decoration: InputDecoration(
+                      hintText: 'e.g. Urban Company, Local Technician',
+                      filled: true,
+                      fillColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                     ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Notes
+                  Text(lang == 'hi' ? 'विवरण (Notes)' : 'Notes / Description', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: notesController,
+                    decoration: InputDecoration(
+                      hintText: 'e.g. Routine servicing & filter replacement',
+                      filled: true,
+                      fillColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Save Action Button
+                  ElevatedButton(
+                    onPressed: () {
+                      final amt = double.tryParse(amountController.text.trim()) ?? 0.0;
+                      if (amt <= 0) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(lang == 'hi' ? 'कृपया सही राशि दर्ज करें' : 'Please enter a valid amount')),
+                        );
+                        return;
+                      }
+
+                      final targetProduct = provider.products.firstWhere(
+                        (p) => p.id == selectedProdId,
+                        orElse: () => provider.products.first,
+                      );
+
+                      provider.addExpense(ExpenseRecord(
+                        id: 'exp-${DateTime.now().millisecondsSinceEpoch}',
+                        productId: selectedProdId,
+                        productName: targetProduct.name,
+                        category: selectedCat,
+                        amount: amt,
+                        date: dateStr,
+                        serviceProvider: providerController.text.trim().isNotEmpty ? providerController.text.trim() : 'Service Center',
+                        notes: notesController.text.trim(),
+                      ));
+
+                      Navigator.pop(modalCtx);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(lang == 'hi' ? '✅ खर्चा सफलतापूर्वक दर्ज हुआ!' : '✅ Expense logged successfully!'), backgroundColor: AppTheme.success),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primary,
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size(double.infinity, 48),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                    child: Text(lang == 'hi' ? 'खर्चा सेव करें' : 'Save Expense Log', style: const TextStyle(fontWeight: FontWeight.bold)),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-
-              // Service Provider
-              const Text('Service Provider / Store', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 6),
-              TextField(
-                controller: providerController,
-                decoration: InputDecoration(
-                  hintText: 'e.g. Brand Service Center, Local Mechanic',
-                  filled: true,
-                  fillColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              // Notes
-              const Text('Notes / Description', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 6),
-              TextField(
-                controller: notesController,
-                decoration: InputDecoration(
-                  hintText: 'e.g. Annual AC Jet Cleaning & Filter replacement',
-                  filled: true,
-                  fillColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // Save Action Button
-              ElevatedButton(
-                onPressed: () {
-                  final amt = double.tryParse(amountController.text) ?? 0.0;
-                  if (amt <= 0 || selectedProdId.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Please enter a valid amount and product')),
-                    );
-                    return;
-                  }
-
-                  final targetProduct = provider.products.firstWhere((p) => p.id == selectedProdId);
-
-                  provider.addExpense(ExpenseRecord(
-                    id: 'exp-${DateTime.now().millisecondsSinceEpoch}',
-                    productId: selectedProdId,
-                    productName: targetProduct.name,
-                    category: selectedCat,
-                    amount: amt,
-                    date: dateStr,
-                    serviceProvider: providerController.text,
-                    notes: notesController.text,
-                  ));
-
-                  Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Expense logged successfully!')),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primary,
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size(double.infinity, 48),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                ),
-                child: const Text('Save Expense Log', style: TextStyle(fontWeight: FontWeight.bold)),
-              ),
-            ],
+            ),
           ),
         ),
       ),

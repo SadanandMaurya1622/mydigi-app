@@ -1,39 +1,45 @@
 {
   "project_info": {
     "project_number": "740310683452",
+    "firebase_url": "https://mydigi-a2402-default-rtdb.firebaseio.com",
     "project_id": "mydigi-a2402",
-    "storage_bucket": "mydigi-a2402.appspot.com"
+    "storage_bucket": "mydigi-a2402.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:740310683452:android:694f58c49e5d4821a2402b",
+        "mobilesdk_app_id": "1:740310683452:android:e1a2907a0d02af68ee9839",
         "android_client_info": {
-          "package_name": "com.warrantyx.app.warrantyx_app"
+          "package_name": "com.mydigi.app"
         }
       },
       "oauth_client": [
         {
-          "client_id": "740310683452-androidclient.apps.googleusercontent.com",
+          "client_id": "740310683452-cb427i5e18b7cuguki60r4l105orakek.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.warrantyx.app.warrantyx_app",
-            "certificate_hash": ""
+            "package_name": "com.mydigi.app",
+            "certificate_hash": "5984809c42b2557b347c64d0c0e1764b1ac4afdb"
           }
         },
         {
-          "client_id": "740310683452-webclient.apps.googleusercontent.com",
+          "client_id": "740310683452-f32uo8c3k1hkrhele1mu4gjik439kh1t.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyMyDigiAndroidKey740310683452A2402"
+          "current_key": "AIzaSyARl2RiH5unUSiybyo6kYBoNxnu6t5DwLc"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "740310683452-f32uo8c3k1hkrhele1mu4gjik439kh1t.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

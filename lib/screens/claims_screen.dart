@@ -18,7 +18,10 @@ class ClaimsScreen extends StatefulWidget {
 
 class _ClaimsScreenState extends State<ClaimsScreen> {
   void _showNewClaimModal(BuildContext context, WarrantyProvider provider, String lang, bool isDark) {
-    String selectedProdId = widget.preselectedProductId ?? (provider.products.isNotEmpty ? provider.products.first.id : '');
+    final validProductIds = provider.products.map((p) => p.id).toSet();
+    String? selectedProdId = (widget.preselectedProductId != null && validProductIds.contains(widget.preselectedProductId))
+        ? widget.preselectedProductId
+        : (provider.products.isNotEmpty ? provider.products.first.id : null);
     final descController = TextEditingController();
     final serviceCenterController = TextEditingController(text: 'Authorized Brand Service Center');
 
@@ -27,118 +30,122 @@ class _ClaimsScreenState extends State<ClaimsScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setModalState) => GlassCard(
-          borderRadius: 28,
-          opacity: 0.92,
-          blur: 28,
-          margin: EdgeInsets.only(
-            bottom: MediaQuery.of(ctx).viewInsets.bottom,
-          ),
-          padding: const EdgeInsets.all(22),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      AppTranslations.tr('claimWarranty', lang),
-                      style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18),
+        builder: (modalCtx, setModalState) => SafeArea(
+          child: GlassCard(
+            borderRadius: 28,
+            opacity: 0.92,
+            blur: 28,
+            margin: EdgeInsets.only(
+              bottom: MediaQuery.of(modalCtx).viewInsets.bottom,
+            ),
+            padding: const EdgeInsets.all(22),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        AppTranslations.tr('claimWarranty', lang),
+                        style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(modalCtx),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Product Picker
+                  const Text('Select Product for Claim *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(ctx),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                // Product Picker
-                const Text('Select Product for Claim *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: selectedProdId.isNotEmpty ? selectedProdId : null,
-                      isExpanded: true,
-                      items: provider.products
-                          .map((p) => DropdownMenuItem(
-                                value: p.id,
-                                child: Text('${p.name} (${p.brand})', style: const TextStyle(fontSize: 13), overflow: TextOverflow.ellipsis),
-                              ))
-                          .toList(),
-                      onChanged: (val) {
-                        if (val != null) setModalState(() => selectedProdId = val);
-                      },
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: validProductIds.contains(selectedProdId) ? selectedProdId : (provider.products.isNotEmpty ? provider.products.first.id : null),
+                        isExpanded: true,
+                        items: provider.products
+                            .map((p) => DropdownMenuItem(
+                                  value: p.id,
+                                  child: Text('${p.name} (${p.brand})', style: const TextStyle(fontSize: 13), overflow: TextOverflow.ellipsis),
+                                ))
+                            .toList(),
+                        onChanged: (val) {
+                          if (val != null) setModalState(() => selectedProdId = val);
+                        },
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 12),
+                  const SizedBox(height: 12),
 
-                // Issue Description
-                const Text('Issue / Breakdown Description *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 6),
-                TextField(
-                  controller: descController,
-                  maxLines: 3,
-                  decoration: InputDecoration(
-                    hintText: 'e.g. Display backlight flickering, abnormal noise during operation',
-                    filled: true,
-                    fillColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  // Issue Description
+                  const Text('Issue / Breakdown Description *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: descController,
+                    maxLines: 3,
+                    decoration: InputDecoration(
+                      hintText: 'e.g. Display backlight flickering, abnormal noise during operation',
+                      filled: true,
+                      fillColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 12),
+                  const SizedBox(height: 12),
 
-                // Service Center Name
-                const Text('Service Center / Channel', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 6),
-                TextField(
-                  controller: serviceCenterController,
-                  decoration: InputDecoration(
-                    hintText: 'Brand Authorized Care',
-                    filled: true,
-                    fillColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  // Service Center Name
+                  const Text('Service Center / Channel', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: serviceCenterController,
+                    decoration: InputDecoration(
+                      hintText: 'Brand Authorized Care',
+                      filled: true,
+                      fillColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 20),
+                  const SizedBox(height: 20),
 
-                // Submit Button
-                ElevatedButton(
-                  onPressed: () {
-                    if (selectedProdId.isEmpty || descController.text.trim().isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Please select a product and write the issue description')),
+                  // Submit Button
+                  ElevatedButton(
+                    onPressed: () {
+                      if (selectedProdId == null || selectedProdId!.isEmpty || descController.text.trim().isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Please select a product and write the issue description')),
+                        );
+                        return;
+                      }
+
+                      final prod = provider.products.firstWhere(
+                        (p) => p.id == selectedProdId,
+                        orElse: () => provider.products.first,
                       );
-                      return;
-                    }
+                      final ticketNo = 'CLM-${1000 + provider.claims.length + 1}';
 
-                    final prod = provider.products.firstWhere((p) => p.id == selectedProdId);
-                    final ticketNo = 'CLM-${1000 + provider.claims.length + 1}';
+                      final newClaim = WarrantyClaim(
+                        id: 'clm-${DateTime.now().millisecondsSinceEpoch}',
+                        productId: selectedProdId!,
+                        productName: prod.name,
+                        ticketNumber: ticketNo,
+                        description: descController.text.trim(),
+                        claimDate: '01 Sep 2026',
+                        status: 'Submitted',
+                        serviceCenter: serviceCenterController.text,
+                      );
 
-                    final newClaim = WarrantyClaim(
-                      id: 'clm-${DateTime.now().millisecondsSinceEpoch}',
-                      productId: selectedProdId,
-                      productName: prod.name,
-                      ticketNumber: ticketNo,
-                      description: descController.text.trim(),
-                      claimDate: '01 Sep 2026',
-                      status: 'Submitted',
-                      serviceCenter: serviceCenterController.text,
-                    );
-
-                    provider.addClaim(newClaim);
-                    Navigator.pop(ctx);
+                      provider.addClaim(newClaim);
+                      Navigator.pop(modalCtx);
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text('✨ Claim ticket $ticketNo generated!'),
@@ -159,8 +166,9 @@ class _ClaimsScreenState extends State<ClaimsScreen> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   @override
   Widget build(BuildContext context) {

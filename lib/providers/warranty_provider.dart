@@ -1,419 +1,57 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/product_model.dart';
 import '../services/firestore_service.dart';
+import '../services/realtime_database_service.dart';
 
+/// Pure Firebase Provider that streams all data live from Firebase Realtime Database and Cloud Firestore.
+/// No mock or hardcoded data is used.
 class WarrantyProvider with ChangeNotifier {
   bool _isDarkMode = false;
   String _language = 'en'; // 'en' or 'hi'
-  bool _isLoggedIn = true;
+  bool _isLoggedIn = false;
   bool _hasCompletedOnboarding = true;
+  bool _isLoadingData = false;
 
   bool get isDarkMode => _isDarkMode;
   String get language => _language;
   bool get isLoggedIn => _isLoggedIn;
   bool get hasCompletedOnboarding => _hasCompletedOnboarding;
+  bool get isLoadingData => _isLoadingData;
 
   UserProfile _userProfile = UserProfile(
-    name: 'Sadanand Gupta',
-    email: 'sadanand@example.com',
-    phone: '+91 98200 12345',
+    name: 'MyDigi User',
+    email: '',
+    phone: '',
     isPro: true,
   );
 
   UserProfile get userProfile => _userProfile;
 
-  final List<ProductItem> _products = [
-    ProductItem(
-      id: 'prod-samsung-ac',
-      name: 'Samsung AC 1.5 Ton 5 Star',
-      category: 'Appliances',
-      brand: 'Samsung',
-      modelNumber: 'AR18TYSYAWKN',
-      serialNumber: 'SAM-AC-9948271',
-      purchaseDate: '15 May 2025',
-      purchasePrice: 42000,
-      sellerName: 'Reliance Digital, Mumbai',
-      sellerContact: '+91 98200 12345',
-      invoiceNumber: 'INV-2025-1025',
-      warrantyPeriod: '1 Year + 10 Yr Compressor',
-      warrantyStartDate: '15 May 2025',
-      warrantyEndDate: '08 Sep 2026',
-      warrantyStatus: 'Expiring Soon',
-      daysRemaining: 7,
-      extendedWarranty: false,
-      hasAMC: false,
-      imageUrl: 'https://images.unsplash.com/photo-1628744448840-55bdb2497bd4?auto=format&fit=crop&w=800&q=80',
-      costBreakdown: CostBreakdown(
-        purchase: 42000,
-        installation: 1500,
-        maintenance: 1850,
-        repair: 0,
-        accessories: 2500,
-        amc: 0,
-      ),
-      notes: 'Installed in Master Bedroom. Stabilizer connected.',
-    ),
-    ProductItem(
-      id: 'prod-sony-tv',
-      name: 'Sony Bravia 55" 4K OLED TV',
-      category: 'Electronics',
-      brand: 'Sony',
-      modelNumber: 'XR-55A80L',
-      serialNumber: 'SNY-TV-558291',
-      purchaseDate: '10 Jan 2026',
-      purchasePrice: 124990,
-      sellerName: 'Croma Megastore, Pune',
-      sellerContact: '+91 98230 11998',
-      invoiceNumber: 'CR-PUN-339182',
-      warrantyPeriod: '2 Years Comprehensive',
-      warrantyStartDate: '10 Jan 2026',
-      warrantyEndDate: '10 Jan 2028',
-      warrantyStatus: 'Active',
-      daysRemaining: 497,
-      extendedWarranty: true,
-      hasAMC: true,
-      imageUrl: 'https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?auto=format&fit=crop&w=800&q=80',
-      costBreakdown: CostBreakdown(
-        purchase: 124990,
-        accessories: 3200,
-        amc: 4500,
-      ),
-      notes: 'Living room OLED display with Dolby Atmos soundbar.',
-    ),
-    ProductItem(
-      id: 'prod-iphone16',
-      name: 'iPhone 16 Pro Max 256GB',
-      category: 'Gadgets',
-      brand: 'Apple',
-      modelNumber: 'MYWR3HN/A',
-      serialNumber: 'DNPZ889102KL',
-      imeiNumber: '356789012345678',
-      purchaseDate: '20 Sep 2025',
-      purchasePrice: 139900,
-      sellerName: 'Apple Store BKC',
-      sellerContact: '1800 120 120',
-      invoiceNumber: 'INV-APL-9982',
-      warrantyPeriod: '1 Year AppleCare+',
-      warrantyStartDate: '20 Sep 2025',
-      warrantyEndDate: '20 Sep 2026',
-      warrantyStatus: 'Active',
-      daysRemaining: 19,
-      extendedWarranty: true,
-      hasAMC: false,
-      imageUrl: 'https://images.unsplash.com/photo-1678685888221-cda773a3dcdb?auto=format&fit=crop&w=800&q=80',
-      costBreakdown: CostBreakdown(
-        purchase: 139900,
-        accessories: 4900,
-      ),
-      notes: 'Natural Titanium edition. AppleCare Plus active.',
-    ),
-    ProductItem(
-      id: 'prod-re-bike',
-      name: 'Royal Enfield Hunter 350',
-      category: 'Vehicle',
-      brand: 'Royal Enfield',
-      modelNumber: 'HN-350 Dapper',
-      serialNumber: 'RE350HN881920',
-      purchaseDate: '14 Feb 2025',
-      purchasePrice: 175000,
-      sellerName: 'RE Brand Store Andheri',
-      sellerContact: '+91 22 2839 9900',
-      invoiceNumber: 'RE-MUM-2025-019',
-      warrantyPeriod: '3 Years / 30,000 KM',
-      warrantyStartDate: '14 Feb 2025',
-      warrantyEndDate: '14 Feb 2028',
-      warrantyStatus: 'Active',
-      daysRemaining: 530,
-      extendedWarranty: true,
-      hasAMC: false,
-      imageUrl: 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&w=800&q=80',
-      costBreakdown: CostBreakdown(
-        purchase: 175000,
-        maintenance: 8500,
-        repair: 2100,
-        accessories: 14000,
-      ),
-      notes: 'Registration MH 02 EX 8841. 4 free services availed.',
-    ),
-    ProductItem(
-      id: 'prod-dell-laptop',
-      name: 'Dell XPS 15 32GB 1TB',
-      category: 'Electronics',
-      brand: 'Dell',
-      modelNumber: 'XPS-9530',
-      serialNumber: 'DEL-88392-XPS',
-      purchaseDate: '05 Jan 2026',
-      purchasePrice: 165000,
-      sellerName: 'Dell Online Store',
-      sellerContact: '1800 425 0088',
-      invoiceNumber: 'DEL-INV-44102',
-      warrantyPeriod: '1 Year Onsite + Accidental',
-      warrantyStartDate: '05 Jan 2026',
-      warrantyEndDate: '05 Jan 2027',
-      warrantyStatus: 'Active',
-      daysRemaining: 126,
-      extendedWarranty: true,
-      hasAMC: false,
-      imageUrl: 'https://images.unsplash.com/photo-1593642632823-8f785ba67e45?auto=format&fit=crop&w=800&q=80',
-      costBreakdown: CostBreakdown(
-        purchase: 165000,
-        maintenance: 800,
-        repair: 1200,
-        accessories: 3200,
-      ),
-    ),
-    ProductItem(
-      id: 'prod-ifb-microwave',
-      name: 'IFB 30L Convection Microwave',
-      category: 'Appliances',
-      brand: 'IFB',
-      modelNumber: '30FRC2',
-      serialNumber: 'IFB882910',
-      purchaseDate: '10 Jan 2023',
-      purchasePrice: 16500,
-      sellerName: 'Vijay Sales',
-      sellerContact: '1800 209 1010',
-      invoiceNumber: 'VS-2023-771',
-      warrantyPeriod: '1 Year Complete',
-      warrantyStartDate: '10 Jan 2023',
-      warrantyEndDate: '10 Jan 2024',
-      warrantyStatus: 'Expired',
-      daysRemaining: 0,
-      extendedWarranty: false,
-      hasAMC: false,
-      imageUrl: 'https://images.unsplash.com/photo-1585659722983-3a675dabf23d?auto=format&fit=crop&w=800&q=80',
-      costBreakdown: CostBreakdown(
-        purchase: 16500,
-        maintenance: 1200,
-      ),
-    ),
-  ];
+  // Real-time Lists populated strictly from Firebase Realtime Database
+  final List<ProductItem> _products = [];
+  final List<ExpenseRecord> _expenses = [];
+  final List<ServiceRecord> _services = [];
+  final List<DocumentRecord> _documents = [];
+  final List<AMCRecord> _amcRecords = [];
+  final List<InsurancePolicy> _insurancePolicies = [];
+  final List<WarrantyClaim> _claims = [];
+  final List<FamilyMember> _familyMembers = [];
+  final List<AppNotification> _notifications = [];
 
-  final List<ExpenseRecord> _expenses = [
-    ExpenseRecord(
-      id: 'exp-1',
-      productId: 'prod-samsung-ac',
-      productName: 'Samsung AC 1.5 Ton',
-      category: 'Maintenance',
-      amount: 1850.0,
-      date: '12 Aug 2026',
-      serviceProvider: 'Urban Company Service Pro',
-      notes: 'Deep jet pump cleaning and cooling gas pressure check.',
-    ),
-    ExpenseRecord(
-      id: 'exp-2',
-      productId: 'prod-sony-tv',
-      productName: 'Sony Bravia 55" OLED',
-      category: 'AMC',
-      amount: 4500.0,
-      date: '10 Jan 2026',
-      serviceProvider: 'Sony Protect Plus Plan',
-      notes: 'Extended panel insurance for 2nd year.',
-    ),
-    ExpenseRecord(
-      id: 'exp-3',
-      productId: 'prod-re-bike',
-      productName: 'Royal Enfield Hunter 350',
-      category: 'Service',
-      amount: 3200.0,
-      date: '02 Jul 2026',
-      serviceProvider: 'RE Authorized Workshop Andheri',
-      notes: '3rd periodic oil change & chain lubrication.',
-    ),
-    ExpenseRecord(
-      id: 'exp-4',
-      productId: 'prod-iphone16',
-      productName: 'iPhone 16 Pro Max',
-      category: 'Accessories',
-      amount: 4900.0,
-      date: '20 Sep 2025',
-      serviceProvider: 'Apple Store BKC',
-      notes: 'Original MagSafe Silicone Case & 30W Power Adapter.',
-    ),
-  ];
-
-  final List<ServiceRecord> _services = [
-    ServiceRecord(
-      id: 'srv-1',
-      productId: 'prod-samsung-ac',
-      productName: 'Samsung AC 1.5 Ton',
-      date: '12 Aug 2026',
-      serviceType: 'Jet Pump Deep Cleaning',
-      cost: 1850,
-      technicianName: 'Ramesh Sharma',
-      serviceProvider: 'Urban Company',
-      nextServiceDate: '12 Feb 2027',
-    ),
-    ServiceRecord(
-      id: 'srv-2',
-      productId: 'prod-re-bike',
-      productName: 'Royal Enfield Hunter 350',
-      date: '02 Jul 2026',
-      serviceType: '10,000 KM Periodic Service',
-      cost: 3200,
-      technicianName: 'Amit Verma',
-      serviceProvider: 'RE Service Hub',
-      nextServiceDate: '02 Jan 2027',
-    ),
-  ];
-
-  final List<DocumentRecord> _documents = [
-    DocumentRecord(
-      id: 'doc-1',
-      productId: 'prod-samsung-ac',
-      productName: 'Samsung AC 1.5 Ton',
-      name: 'Samsung_AC_Invoice.pdf',
-      type: 'Invoice',
-      size: '1.8 MB',
-      uploadDate: '15 May 2025',
-    ),
-    DocumentRecord(
-      id: 'doc-2',
-      productId: 'prod-sony-tv',
-      productName: 'Sony Bravia 55" OLED',
-      name: 'Sony_Bravia_Bill_Warranty.pdf',
-      type: 'Invoice',
-      size: '2.4 MB',
-      uploadDate: '10 Jan 2026',
-    ),
-    DocumentRecord(
-      id: 'doc-3',
-      productId: 'prod-iphone16',
-      productName: 'iPhone 16 Pro Max',
-      name: 'AppleCare_Certificate.pdf',
-      type: 'Warranty Card',
-      size: '940 KB',
-      uploadDate: '20 Sep 2025',
-    ),
-    DocumentRecord(
-      id: 'doc-4',
-      productId: 'prod-re-bike',
-      productName: 'Royal Enfield Hunter 350',
-      name: 'RE_Hunter_Insurance_Policy.pdf',
-      type: 'Insurance',
-      size: '3.1 MB',
-      uploadDate: '14 Feb 2025',
-    ),
-  ];
-
-  final List<AMCRecord> _amcRecords = [
-    AMCRecord(
-      id: 'amc-1',
-      productId: 'prod-sony-tv',
-      productName: 'Sony Bravia 55" OLED TV',
-      provider: 'Sony Protect Plus Care',
-      planName: 'Comprehensive 2-Year Cover',
-      startDate: '10 Jan 2026',
-      endDate: '10 Jan 2028',
-      cost: 4500,
-      status: 'Active',
-      contactNumber: '1800 103 7799',
-      freeServicesRemaining: 2,
-    ),
-    AMCRecord(
-      id: 'amc-2',
-      productId: 'prod-samsung-ac',
-      productName: 'Samsung AC 1.5 Ton',
-      provider: 'Samsung Care+ Home',
-      planName: 'Annual AC Wellness Plan',
-      startDate: '15 May 2025',
-      endDate: '15 May 2026',
-      cost: 2499,
-      status: 'Expiring Soon',
-      contactNumber: '1800 407 267864',
-      freeServicesRemaining: 1,
-    ),
-  ];
-
-  final List<InsurancePolicy> _insurancePolicies = [
-    InsurancePolicy(
-      id: 'ins-1',
-      productId: 'prod-re-bike',
-      productName: 'Royal Enfield Hunter 350',
-      provider: 'ICICI Lombard General Insurance',
-      policyNumber: '3001/2025/998124',
-      premiumAmount: 4850,
-      coverageAmount: 165000,
-      startDate: '14 Feb 2025',
-      expiryDate: '13 Feb 2028',
-      status: 'Active',
-    ),
-  ];
-
-  final List<WarrantyClaim> _claims = [
-    WarrantyClaim(
-      id: 'clm-1',
-      productId: 'prod-samsung-ac',
-      productName: 'Samsung AC 1.5 Ton',
-      ticketNumber: 'CLM-2026-SAM-491',
-      claimDate: '28 Aug 2026',
-      description: 'Minor vibration noise from outdoor fan motor.',
-      serviceCenter: 'Samsung Authorized Center, Bandra',
-      status: 'In Progress',
-      technicianAssigned: 'Kunal Patil (Ph: 98199 44321)',
-      claimAmount: 0.0,
-    ),
-  ];
-
-  final List<FamilyMember> _familyMembers = [
-    FamilyMember(
-      id: 'fam-1',
-      name: 'Pooja Gupta',
-      role: 'Co-Owner',
-      relation: 'Spouse',
-      email: 'pooja.gupta@example.com',
-      permissions: 'Full Manage Products',
-    ),
-    FamilyMember(
-      id: 'fam-2',
-      name: 'Aarav Gupta',
-      role: 'Family Member',
-      relation: 'Son',
-      email: 'aarav.g@example.com',
-      permissions: 'View Only & Add Invoices',
-    ),
-  ];
-
-  final List<AppNotification> _notifications = [
-    AppNotification(
-      id: 'notif-1',
-      title: '🚨 AC Warranty Expiring in 7 Days!',
-      message: 'Samsung 1.5 Ton AC standard 1-year warranty is ending. Book free final service inspection now.',
-      date: '2 hours ago',
-      type: 'expiry',
-      unread: true,
-      productId: 'prod-samsung-ac',
-    ),
-    AppNotification(
-      id: 'notif-2',
-      title: '🛡️ AMC Service Reminder',
-      message: 'Sony Bravia 55" OLED TV has 1 free screen calibration & cleaning session left in current plan.',
-      date: '1 day ago',
-      type: 'amc',
-      unread: true,
-      productId: 'prod-sony-tv',
-    ),
-    AppNotification(
-      id: 'notif-3',
-      title: '✨ Bill Auto-Archived',
-      message: 'Invoice for Apple Store BKC has been saved to secure encrypted cloud vault.',
-      date: '3 days ago',
-      type: 'invoice',
-      unread: false,
-      productId: 'prod-iphone16',
-    ),
-  ];
+  // Stream Subscriptions
+  final List<StreamSubscription> _subscriptions = [];
 
   // Getters
-  List<ProductItem> get products => [..._products];
-  List<ExpenseRecord> get expenses => [..._expenses];
-  List<ServiceRecord> get services => [..._services];
-  List<DocumentRecord> get documents => [..._documents];
-  List<AMCRecord> get amcRecords => [..._amcRecords];
-  List<InsurancePolicy> get insurancePolicies => [..._insurancePolicies];
-  List<WarrantyClaim> get claims => [..._claims];
-  List<FamilyMember> get familyMembers => [..._familyMembers];
-  List<AppNotification> get notifications => [..._notifications];
+  List<ProductItem> get products => List.unmodifiable(_products);
+  List<ExpenseRecord> get expenses => List.unmodifiable(_expenses);
+  List<ServiceRecord> get services => List.unmodifiable(_services);
+  List<DocumentRecord> get documents => List.unmodifiable(_documents);
+  List<AMCRecord> get amcRecords => List.unmodifiable(_amcRecords);
+  List<InsurancePolicy> get insurancePolicies => List.unmodifiable(_insurancePolicies);
+  List<WarrantyClaim> get claims => List.unmodifiable(_claims);
+  List<FamilyMember> get familyMembers => List.unmodifiable(_familyMembers);
+  List<AppNotification> get notifications => List.unmodifiable(_notifications);
 
   int get unreadNotificationsCount => _notifications.where((n) => n.unread).length;
 
@@ -423,7 +61,7 @@ class WarrantyProvider with ChangeNotifier {
   int get expiringSoonCount => _products.where((p) => p.warrantyStatus == 'Expiring Soon').length;
   int get expiredCount => _products.where((p) => p.warrantyStatus == 'Expired').length;
 
-  // Actions
+  // App Theme & Language Controls
   void toggleTheme() {
     _isDarkMode = !_isDarkMode;
     notifyListeners();
@@ -434,135 +72,23 @@ class WarrantyProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  void updateUserProfile(UserProfile profile) {
-    _userProfile = profile;
+  void completeOnboarding() {
+    _hasCompletedOnboarding = true;
     notifyListeners();
   }
 
-  void addProduct(ProductItem product) {
-    _products.insert(0, product);
-    // Add default invoice record
-    final doc = DocumentRecord(
-      id: 'doc-${DateTime.now().millisecondsSinceEpoch}',
-      productId: product.id,
-      productName: product.name,
-      name: '${product.brand}_Invoice.pdf',
-      type: 'Invoice',
-      size: '1.4 MB',
-      uploadDate: 'Just now',
-    );
-    _documents.insert(0, doc);
-    notifyListeners();
-
-    if (_userProfile.uid != null && _userProfile.uid!.isNotEmpty) {
-      FirestoreService().saveProduct(_userProfile.uid!, product);
-      FirestoreService().saveDocument(_userProfile.uid!, doc);
-    }
-  }
-
-  void updateProduct(ProductItem product) {
-    final index = _products.indexWhere((p) => p.id == product.id);
-    if (index != -1) {
-      _products[index] = product;
-      notifyListeners();
-      if (_userProfile.uid != null && _userProfile.uid!.isNotEmpty) {
-        FirestoreService().saveProduct(_userProfile.uid!, product);
-      }
-    }
-  }
-
-  void deleteProduct(String productId) {
-    _products.removeWhere((p) => p.id == productId);
-    _expenses.removeWhere((e) => e.productId == productId);
-    _documents.removeWhere((d) => d.productId == productId);
-    _amcRecords.removeWhere((a) => a.productId == productId);
-    _claims.removeWhere((c) => c.productId == productId);
-    notifyListeners();
-    if (_userProfile.uid != null && _userProfile.uid!.isNotEmpty) {
-      FirestoreService().deleteProduct(_userProfile.uid!, productId);
-    }
-  }
-
-  void addExpense(ExpenseRecord expense) {
-    _expenses.insert(0, expense);
-    // Update product cost breakdown
-    final productIndex = _products.indexWhere((p) => p.id == expense.productId);
-    if (productIndex != -1) {
-      final p = _products[productIndex];
-      final cb = p.costBreakdown;
-      CostBreakdown updated;
-      switch (expense.category.toLowerCase()) {
-        case 'maintenance':
-        case 'service':
-          updated = cb.copyWith(maintenance: cb.maintenance + expense.amount);
-          break;
-        case 'repair':
-          updated = cb.copyWith(repair: cb.repair + expense.amount);
-          break;
-        case 'amc':
-          updated = cb.copyWith(amc: cb.amc + expense.amount);
-          break;
-        case 'accessories':
-          updated = cb.copyWith(accessories: cb.accessories + expense.amount);
-          break;
-        default:
-          updated = cb.copyWith(other: cb.other + expense.amount);
-      }
-      _products[productIndex] = p.copyWith(costBreakdown: updated);
-    }
-    notifyListeners();
-    if (_userProfile.uid != null && _userProfile.uid!.isNotEmpty) {
-      FirestoreService().saveExpense(_userProfile.uid!, expense);
-    }
-  }
-
-  void addServiceRecord(ServiceRecord service) {
-    _services.insert(0, service);
-    notifyListeners();
-    if (_userProfile.uid != null && _userProfile.uid!.isNotEmpty) {
-      FirestoreService().saveService(_userProfile.uid!, service);
-    }
-  }
-
-  void addClaim(WarrantyClaim claim) {
-    _claims.insert(0, claim);
-    notifyListeners();
-    if (_userProfile.uid != null && _userProfile.uid!.isNotEmpty) {
-      FirestoreService().saveClaim(_userProfile.uid!, claim);
-    }
-  }
-
-  void addDocument(DocumentRecord document) {
-    _documents.insert(0, document);
-    notifyListeners();
-    if (_userProfile.uid != null && _userProfile.uid!.isNotEmpty) {
-      FirestoreService().saveDocument(_userProfile.uid!, document);
-    }
-  }
-
-  void markAllNotificationsAsRead() {
-    for (var n in _notifications) {
-      n.unread = false;
-    }
-    notifyListeners();
-  }
-
-  void markNotificationAsRead(String id) {
-    final index = _notifications.indexWhere((n) => n.id == id);
-    if (index != -1) {
-      _notifications[index].unread = false;
-      notifyListeners();
-    }
-  }
+  // ==========================================
+  // Auth & Real-Time Sync with Firebase Realtime Database
+  // ==========================================
 
   Future<void> login(String name, String email, String phone, {String? photoUrl, String? uid}) async {
     final effectiveUid = (uid != null && uid.isNotEmpty)
         ? uid
-        : (email.isNotEmpty ? email.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_') : 'sadanand_maurya_user');
+        : (email.isNotEmpty ? email.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_') : 'user_main');
 
     _userProfile = UserProfile(
       name: name.isNotEmpty ? name : 'MyDigi User',
-      email: email.isNotEmpty ? email : 'sadanandmaurya.rj@gmail.com',
+      email: email.isNotEmpty ? email : 'user@mydigi.app',
       phone: phone.isNotEmpty ? phone : '+91 98200 12345',
       photoUrl: photoUrl,
       uid: effectiveUid,
@@ -572,45 +98,476 @@ class WarrantyProvider with ChangeNotifier {
     _hasCompletedOnboarding = true;
     notifyListeners();
 
-    // Sync with Cloud Firestore
-    try {
-      // 1. Save user profile document to Firestore: users/{effectiveUid}
-      await FirestoreService().saveUserProfile(_userProfile);
+    // 1. Save User Profile in Firebase Realtime Database & Firestore (non-blocking in background)
+    RealtimeDatabaseService().saveUserProfile(_userProfile);
+    FirestoreService().saveUserProfile(_userProfile);
 
-      // 2. Load existing user products from Firestore if any
-      final remoteProducts = await FirestoreService().fetchProducts(effectiveUid);
-      if (remoteProducts.isNotEmpty) {
-        _products.clear();
-        _products.addAll(remoteProducts);
-        final remoteExpenses = await FirestoreService().fetchExpenses(effectiveUid);
-        if (remoteExpenses.isNotEmpty) {
-          _expenses.clear();
-          _expenses.addAll(remoteExpenses);
+    // 2. Initialize Real-Time Streams for this user from Realtime Database
+    _initRealtimeStreams(effectiveUid);
+  }
+
+  void _initRealtimeStreams(String uid) {
+    // Cancel any previous subscriptions
+    _cancelSubscriptions();
+    _isLoadingData = true;
+    notifyListeners();
+
+    // 1. Stream Products from Realtime Database & Firestore
+    _subscriptions.add(
+      RealtimeDatabaseService().streamProducts(uid).listen((liveProducts) {
+        for (var p in liveProducts) {
+          final idx = _products.indexWhere((x) => x.id == p.id);
+          if (idx != -1) {
+            _products[idx] = p;
+          } else {
+            _products.add(p);
+          }
+        }
+        _isLoadingData = false;
+        notifyListeners();
+      }, onError: (e) {
+        debugPrint('[WarrantyProvider] Error streaming products from RTDB: $e');
+        _isLoadingData = false;
+        notifyListeners();
+      }),
+    );
+
+    _subscriptions.add(
+      FirestoreService().streamProducts(uid).listen((firestoreProducts) {
+        for (var p in firestoreProducts) {
+          final idx = _products.indexWhere((x) => x.id == p.id);
+          if (idx != -1) {
+            _products[idx] = p;
+          } else {
+            _products.add(p);
+            // Sync to RTDB so it is visible in Realtime Database Console
+            RealtimeDatabaseService().saveProduct(uid, p);
+          }
+        }
+        _isLoadingData = false;
+        notifyListeners();
+      }, onError: (e) => debugPrint('[WarrantyProvider] Firestore products notice: $e')),
+    );
+
+    // 2. Stream Expenses from Realtime Database & Firestore
+    _subscriptions.add(
+      RealtimeDatabaseService().streamExpenses(uid).listen((liveExpenses) {
+        for (var e in liveExpenses) {
+          final idx = _expenses.indexWhere((x) => x.id == e.id);
+          if (idx != -1) {
+            _expenses[idx] = e;
+          } else {
+            _expenses.add(e);
+          }
         }
         notifyListeners();
-      } else {
-        // 3. Seed initial starter products to Firestore for new user so they appear immediately in Firebase Console!
-        await FirestoreService().syncInitialDataIfEmpty(
-          effectiveUid,
-          defaultProducts: _products,
-          defaultExpenses: _expenses,
-          defaultAMCs: _amcRecords,
-          defaultClaims: _claims,
-          defaultDocuments: _documents,
-        );
-      }
-    } catch (e) {
-      debugPrint('[WarrantyProvider] Firestore sync notice: $e');
-    }
+      }, onError: (e) => debugPrint('[WarrantyProvider] Error streaming expenses from RTDB: $e')),
+    );
+
+    _subscriptions.add(
+      FirestoreService().streamExpenses(uid).listen((firestoreExpenses) {
+        for (var e in firestoreExpenses) {
+          final idx = _expenses.indexWhere((x) => x.id == e.id);
+          if (idx != -1) {
+            _expenses[idx] = e;
+          } else {
+            _expenses.add(e);
+            RealtimeDatabaseService().saveExpense(uid, e);
+          }
+        }
+        notifyListeners();
+      }, onError: (e) => debugPrint('[WarrantyProvider] Firestore expenses notice: $e')),
+    );
+
+    // 3. Stream Services
+    _subscriptions.add(
+      RealtimeDatabaseService().streamServices(uid).listen((liveServices) {
+        for (var s in liveServices) {
+          final idx = _services.indexWhere((x) => x.id == s.id);
+          if (idx != -1) {
+            _services[idx] = s;
+          } else {
+            _services.add(s);
+          }
+        }
+        notifyListeners();
+      }, onError: (e) => debugPrint('[WarrantyProvider] Error streaming services from RTDB: $e')),
+    );
+
+    // 4. Stream Documents
+    _subscriptions.add(
+      RealtimeDatabaseService().streamDocuments(uid).listen((liveDocs) {
+        for (var d in liveDocs) {
+          final idx = _documents.indexWhere((x) => x.id == d.id);
+          if (idx != -1) {
+            _documents[idx] = d;
+          } else {
+            _documents.add(d);
+          }
+        }
+        notifyListeners();
+      }, onError: (e) => debugPrint('[WarrantyProvider] Error streaming documents from RTDB: $e')),
+    );
+
+    // 5. Stream AMCs
+    _subscriptions.add(
+      RealtimeDatabaseService().streamAMCs(uid).listen((liveAMCs) {
+        for (var a in liveAMCs) {
+          final idx = _amcRecords.indexWhere((x) => x.id == a.id);
+          if (idx != -1) {
+            _amcRecords[idx] = a;
+          } else {
+            _amcRecords.add(a);
+          }
+        }
+        notifyListeners();
+      }, onError: (e) => debugPrint('[WarrantyProvider] Error streaming AMCs from RTDB: $e')),
+    );
+
+    // 6. Stream Insurance
+    _subscriptions.add(
+      RealtimeDatabaseService().streamInsurance(uid).listen((liveInsurance) {
+        for (var i in liveInsurance) {
+          final idx = _insurancePolicies.indexWhere((x) => x.id == i.id);
+          if (idx != -1) {
+            _insurancePolicies[idx] = i;
+          } else {
+            _insurancePolicies.add(i);
+          }
+        }
+        notifyListeners();
+      }, onError: (e) => debugPrint('[WarrantyProvider] Error streaming insurance from RTDB: $e')),
+    );
+
+    // 7. Stream Claims
+    _subscriptions.add(
+      RealtimeDatabaseService().streamClaims(uid).listen((liveClaims) {
+        for (var c in liveClaims) {
+          final idx = _claims.indexWhere((x) => x.id == c.id);
+          if (idx != -1) {
+            _claims[idx] = c;
+          } else {
+            _claims.add(c);
+          }
+        }
+        notifyListeners();
+      }, onError: (e) => debugPrint('[WarrantyProvider] Error streaming claims from RTDB: $e')),
+    );
+
+    // 8. Stream Family
+    _subscriptions.add(
+      RealtimeDatabaseService().streamFamilyMembers(uid).listen((liveFamily) {
+        for (var f in liveFamily) {
+          final idx = _familyMembers.indexWhere((x) => x.id == f.id);
+          if (idx != -1) {
+            _familyMembers[idx] = f;
+          } else {
+            _familyMembers.add(f);
+          }
+        }
+        notifyListeners();
+      }, onError: (e) => debugPrint('[WarrantyProvider] Error streaming family from RTDB: $e')),
+    );
+
+    // 9. Stream Notifications
+    _subscriptions.add(
+      RealtimeDatabaseService().streamNotifications(uid).listen((liveNotifs) {
+        for (var n in liveNotifs) {
+          final idx = _notifications.indexWhere((x) => x.id == n.id);
+          if (idx != -1) {
+            _notifications[idx] = n;
+          } else {
+            _notifications.add(n);
+          }
+        }
+        notifyListeners();
+      }, onError: (e) => debugPrint('[WarrantyProvider] Error streaming notifications from RTDB: $e')),
+    );
   }
 
   void logout() {
     _isLoggedIn = false;
+    _cancelSubscriptions();
+    _products.clear();
+    _expenses.clear();
+    _services.clear();
+    _documents.clear();
+    _amcRecords.clear();
+    _insurancePolicies.clear();
+    _claims.clear();
+    _familyMembers.clear();
+    _notifications.clear();
     notifyListeners();
   }
 
-  void completeOnboarding() {
-    _hasCompletedOnboarding = true;
+  void _cancelSubscriptions() {
+    for (var sub in _subscriptions) {
+      sub.cancel();
+    }
+    _subscriptions.clear();
+  }
+
+  @override
+  void dispose() {
+    _cancelSubscriptions();
+    super.dispose();
+  }
+
+  // ==========================================
+  // Mutations (All Save Directly to Cloud Firestore)
+  // ==========================================
+
+  String get _activeUid {
+    if (_userProfile.uid != null && _userProfile.uid!.isNotEmpty) {
+      return _userProfile.uid!;
+    }
+    return '';
+  }
+
+  void updateUserProfile(UserProfile profile) {
+    _userProfile = profile;
     notifyListeners();
+    final uid = _activeUid;
+    if (uid.isNotEmpty) {
+      RealtimeDatabaseService().saveUserProfile(profile);
+      FirestoreService().saveUserProfile(profile);
+    }
+  }
+
+  void addProduct(ProductItem product) {
+    _products.removeWhere((p) => p.id == product.id);
+    _products.insert(0, product);
+    notifyListeners();
+
+    final uid = _activeUid;
+    if (uid.isNotEmpty) {
+      RealtimeDatabaseService().saveProduct(uid, product);
+      FirestoreService().saveProduct(uid, product);
+      // Create and save invoice document
+      final doc = DocumentRecord(
+        id: 'doc-${DateTime.now().millisecondsSinceEpoch}',
+        productId: product.id,
+        productName: product.name,
+        name: '${product.brand}_Invoice.pdf',
+        type: 'Invoice',
+        size: '1.4 MB',
+        uploadDate: 'Just now',
+      );
+      _documents.insert(0, doc);
+      notifyListeners();
+      RealtimeDatabaseService().saveDocument(uid, doc);
+      FirestoreService().saveDocument(uid, doc);
+    }
+  }
+
+  void updateProduct(ProductItem product) {
+    final idx = _products.indexWhere((p) => p.id == product.id);
+    if (idx != -1) {
+      _products[idx] = product;
+    } else {
+      _products.add(product);
+    }
+    notifyListeners();
+
+    final uid = _activeUid;
+    if (uid.isNotEmpty) {
+      RealtimeDatabaseService().saveProduct(uid, product);
+      FirestoreService().saveProduct(uid, product);
+    }
+  }
+
+  void deleteProduct(String productId) {
+    _products.removeWhere((p) => p.id == productId);
+    notifyListeners();
+
+    final uid = _activeUid;
+    if (uid.isNotEmpty) {
+      RealtimeDatabaseService().deleteProduct(uid, productId);
+      FirestoreService().deleteProduct(uid, productId);
+    }
+  }
+
+  void addExpense(ExpenseRecord expense) {
+    _expenses.removeWhere((e) => e.id == expense.id);
+    _expenses.insert(0, expense);
+    notifyListeners();
+
+    final uid = _activeUid;
+    if (uid.isNotEmpty) {
+      RealtimeDatabaseService().saveExpense(uid, expense);
+      FirestoreService().saveExpense(uid, expense);
+    }
+  }
+
+  void deleteExpense(String expenseId) {
+    _expenses.removeWhere((e) => e.id == expenseId);
+    notifyListeners();
+
+    final uid = _activeUid;
+    if (uid.isNotEmpty) {
+      RealtimeDatabaseService().deleteExpense(uid, expenseId);
+      FirestoreService().deleteExpense(uid, expenseId);
+    }
+  }
+
+  void addServiceRecord(ServiceRecord service) {
+    _services.removeWhere((s) => s.id == service.id);
+    _services.insert(0, service);
+    notifyListeners();
+
+    final uid = _activeUid;
+    if (uid.isNotEmpty) {
+      RealtimeDatabaseService().saveService(uid, service);
+      FirestoreService().saveService(uid, service);
+    }
+  }
+
+  void deleteServiceRecord(String serviceId) {
+    _services.removeWhere((s) => s.id == serviceId);
+    notifyListeners();
+
+    final uid = _activeUid;
+    if (uid.isNotEmpty) {
+      RealtimeDatabaseService().deleteService(uid, serviceId);
+      FirestoreService().deleteService(uid, serviceId);
+    }
+  }
+
+  void addClaim(WarrantyClaim claim) {
+    _claims.removeWhere((c) => c.id == claim.id);
+    _claims.insert(0, claim);
+    notifyListeners();
+
+    final uid = _activeUid;
+    if (uid.isNotEmpty) {
+      RealtimeDatabaseService().saveClaim(uid, claim);
+      FirestoreService().saveClaim(uid, claim);
+    }
+  }
+
+  void deleteClaim(String claimId) {
+    _claims.removeWhere((c) => c.id == claimId);
+    notifyListeners();
+
+    final uid = _activeUid;
+    if (uid.isNotEmpty) {
+      RealtimeDatabaseService().deleteClaim(uid, claimId);
+      FirestoreService().deleteClaim(uid, claimId);
+    }
+  }
+
+  void addDocument(DocumentRecord document) {
+    _documents.removeWhere((d) => d.id == document.id);
+    _documents.insert(0, document);
+    notifyListeners();
+
+    final uid = _activeUid;
+    if (uid.isNotEmpty) {
+      RealtimeDatabaseService().saveDocument(uid, document);
+      FirestoreService().saveDocument(uid, document);
+    }
+  }
+
+  void deleteDocument(String docId) {
+    _documents.removeWhere((d) => d.id == docId);
+    notifyListeners();
+
+    final uid = _activeUid;
+    if (uid.isNotEmpty) {
+      RealtimeDatabaseService().deleteDocument(uid, docId);
+      FirestoreService().deleteDocument(uid, docId);
+    }
+  }
+
+  void addAMC(AMCRecord amc) {
+    _amcRecords.removeWhere((a) => a.id == amc.id);
+    _amcRecords.insert(0, amc);
+    notifyListeners();
+
+    final uid = _activeUid;
+    if (uid.isNotEmpty) {
+      RealtimeDatabaseService().saveAMC(uid, amc);
+      FirestoreService().saveAMC(uid, amc);
+    }
+  }
+
+  void deleteAMC(String amcId) {
+    _amcRecords.removeWhere((a) => a.id == amcId);
+    notifyListeners();
+
+    final uid = _activeUid;
+    if (uid.isNotEmpty) {
+      RealtimeDatabaseService().deleteAMC(uid, amcId);
+      FirestoreService().deleteAMC(uid, amcId);
+    }
+  }
+
+  void addInsurance(InsurancePolicy policy) {
+    _insurancePolicies.removeWhere((i) => i.id == policy.id);
+    _insurancePolicies.insert(0, policy);
+    notifyListeners();
+
+    final uid = _activeUid;
+    if (uid.isNotEmpty) {
+      RealtimeDatabaseService().saveInsurance(uid, policy);
+      FirestoreService().saveInsurance(uid, policy);
+    }
+  }
+
+  void deleteInsurance(String insuranceId) {
+    _insurancePolicies.removeWhere((i) => i.id == insuranceId);
+    notifyListeners();
+
+    final uid = _activeUid;
+    if (uid.isNotEmpty) {
+      RealtimeDatabaseService().deleteInsurance(uid, insuranceId);
+      FirestoreService().deleteInsurance(uid, insuranceId);
+    }
+  }
+
+  void addFamilyMember(FamilyMember member) {
+    _familyMembers.removeWhere((f) => f.id == member.id);
+    _familyMembers.insert(0, member);
+    notifyListeners();
+
+    final uid = _activeUid;
+    if (uid.isNotEmpty) {
+      RealtimeDatabaseService().saveFamilyMember(uid, member);
+      FirestoreService().saveFamilyMember(uid, member);
+    }
+  }
+
+  void deleteFamilyMember(String memberId) {
+    _familyMembers.removeWhere((f) => f.id == memberId);
+    notifyListeners();
+
+    final uid = _activeUid;
+    if (uid.isNotEmpty) {
+      RealtimeDatabaseService().deleteFamilyMember(uid, memberId);
+      FirestoreService().deleteFamilyMember(uid, memberId);
+    }
+  }
+
+  void markAllNotificationsAsRead() {
+    for (var n in _notifications) {
+      n.unread = false;
+      if (_userProfile.uid != null && _userProfile.uid!.isNotEmpty) {
+        RealtimeDatabaseService().saveNotification(_userProfile.uid!, n);
+        FirestoreService().saveNotification(_userProfile.uid!, n);
+      }
+    }
+    notifyListeners();
+  }
+
+  void markNotificationAsRead(String id) {
+    final index = _notifications.indexWhere((n) => n.id == id);
+    if (index != -1) {
+      _notifications[index].unread = false;
+      if (_userProfile.uid != null && _userProfile.uid!.isNotEmpty) {
+        RealtimeDatabaseService().saveNotification(_userProfile.uid!, _notifications[index]);
+        FirestoreService().saveNotification(_userProfile.uid!, _notifications[index]);
+      }
+      notifyListeners();
+    }
   }
 }

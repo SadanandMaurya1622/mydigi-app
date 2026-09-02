@@ -200,28 +200,55 @@ class _ProductsScreenState extends State<ProductsScreen> {
               Expanded(
                 child: filteredProducts.isEmpty
                     ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.search_off_rounded,
-                              size: 48,
-                              color: isDark ? AppTheme.textMutedDark : AppTheme.textMutedLight,
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              isHindi ? 'कोई प्रोडक्ट नहीं मिला' : 'No products found',
-                              style: const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              isHindi ? 'सर्च टर्म या फिल्टर बदलकर देखें' : 'Try changing filters or search terms',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: isDark ? AppTheme.textMutedDark : AppTheme.textMutedLight,
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                provider.products.isEmpty ? Icons.inventory_2_outlined : Icons.search_off_rounded,
+                                size: 56,
+                                color: AppTheme.primary.withAlpha(180),
                               ),
-                            ),
-                          ],
+                              const SizedBox(height: 14),
+                              Text(
+                                provider.products.isEmpty
+                                    ? (isHindi ? 'कोई प्रोडक्ट सेव नहीं है' : 'No Products Saved Yet')
+                                    : (isHindi ? 'कोई प्रोडक्ट नहीं मिला' : 'No matching products found'),
+                                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                provider.products.isEmpty
+                                    ? (isHindi
+                                        ? 'अपना पहला प्रोडक्ट जोड़ें और Firebase Cloud में सुरक्षित करें।'
+                                        : 'Add your first product to sync with Firebase Cloud.')
+                                    : (isHindi ? 'सर्च टर्म या फिल्टर बदलकर देखें' : 'Try changing filters or search terms'),
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: isDark ? AppTheme.textMutedDark : AppTheme.textMutedLight,
+                                ),
+                              ),
+                              if (provider.products.isEmpty) ...[
+                                const SizedBox(height: 18),
+                                ElevatedButton.icon(
+                                  onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddProductScreen())),
+                                  icon: const Icon(Icons.add_rounded, size: 18),
+                                  label: Text(
+                                    isHindi ? '+ नया प्रोडक्ट जोड़ें' : '+ Add Product',
+                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppTheme.primary,
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
                         ),
                       )
                     : ListView.builder(

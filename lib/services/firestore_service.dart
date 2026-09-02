@@ -2,18 +2,22 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import '../models/product_model.dart';
 
-/// Service for persisting and syncing user data with Cloud Firestore.
+/// Service for persisting and syncing 100% pure real-time data with Cloud Firestore.
 class FirestoreService {
   static final FirestoreService _instance = FirestoreService._internal();
   factory FirestoreService() => _instance;
   FirestoreService._internal();
 
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  FirebaseFirestore get _db => FirebaseFirestore.instance;
 
-  // Collection Reference for Users
+  // Collection Reference for Users: /users
   CollectionReference<Map<String, dynamic>> get _usersCol => _db.collection('users');
 
-  /// 1. Save or Update User Profile in Firestore: `users/{uid}`
+  // ==========================================
+  // 1. User Profile
+  // ==========================================
+
+  /// Save or Update User Profile in Firestore: `users/{uid}`
   Future<void> saveUserProfile(UserProfile profile) async {
     if (profile.uid == null || profile.uid!.isEmpty) {
       debugPrint('[FirestoreService] No UID provided to save user profile.');
@@ -38,7 +42,7 @@ class FirestoreService {
     }
   }
 
-  /// 2. Fetch User Profile
+  /// Fetch User Profile once
   Future<UserProfile?> fetchUserProfile(String uid) async {
     try {
       final doc = await _usersCol.doc(uid).get();
@@ -51,7 +55,87 @@ class FirestoreService {
     return null;
   }
 
-  /// 3. Save or Update Product: `users/{uid}/products/{productId}`
+  // ==========================================
+  // 2. Real-Time Streams (Live Sync from Firebase)
+  // ==========================================
+
+  /// Stream of Products from `users/{uid}/products`
+  Stream<List<ProductItem>> streamProducts(String uid) {
+    if (uid.isEmpty) return Stream.value([]);
+    return _usersCol.doc(uid).collection('products').snapshots().map((snapshot) {
+      return snapshot.docs.map((doc) => ProductItem.fromMap(doc.data(), doc.id)).toList();
+    });
+  }
+
+  /// Stream of Expenses from `users/{uid}/expenses`
+  Stream<List<ExpenseRecord>> streamExpenses(String uid) {
+    if (uid.isEmpty) return Stream.value([]);
+    return _usersCol.doc(uid).collection('expenses').snapshots().map((snapshot) {
+      return snapshot.docs.map((doc) => ExpenseRecord.fromMap(doc.data(), doc.id)).toList();
+    });
+  }
+
+  /// Stream of Services from `users/{uid}/services`
+  Stream<List<ServiceRecord>> streamServices(String uid) {
+    if (uid.isEmpty) return Stream.value([]);
+    return _usersCol.doc(uid).collection('services').snapshots().map((snapshot) {
+      return snapshot.docs.map((doc) => ServiceRecord.fromMap(doc.data(), doc.id)).toList();
+    });
+  }
+
+  /// Stream of Documents from `users/{uid}/documents`
+  Stream<List<DocumentRecord>> streamDocuments(String uid) {
+    if (uid.isEmpty) return Stream.value([]);
+    return _usersCol.doc(uid).collection('documents').snapshots().map((snapshot) {
+      return snapshot.docs.map((doc) => DocumentRecord.fromMap(doc.data(), doc.id)).toList();
+    });
+  }
+
+  /// Stream of AMCs from `users/{uid}/amcs`
+  Stream<List<AMCRecord>> streamAMCs(String uid) {
+    if (uid.isEmpty) return Stream.value([]);
+    return _usersCol.doc(uid).collection('amcs').snapshots().map((snapshot) {
+      return snapshot.docs.map((doc) => AMCRecord.fromMap(doc.data(), doc.id)).toList();
+    });
+  }
+
+  /// Stream of Insurance from `users/{uid}/insurance`
+  Stream<List<InsurancePolicy>> streamInsurance(String uid) {
+    if (uid.isEmpty) return Stream.value([]);
+    return _usersCol.doc(uid).collection('insurance').snapshots().map((snapshot) {
+      return snapshot.docs.map((doc) => InsurancePolicy.fromMap(doc.data(), doc.id)).toList();
+    });
+  }
+
+  /// Stream of Claims from `users/{uid}/claims`
+  Stream<List<WarrantyClaim>> streamClaims(String uid) {
+    if (uid.isEmpty) return Stream.value([]);
+    return _usersCol.doc(uid).collection('claims').snapshots().map((snapshot) {
+      return snapshot.docs.map((doc) => WarrantyClaim.fromMap(doc.data(), doc.id)).toList();
+    });
+  }
+
+  /// Stream of Family Members from `users/{uid}/family`
+  Stream<List<FamilyMember>> streamFamilyMembers(String uid) {
+    if (uid.isEmpty) return Stream.value([]);
+    return _usersCol.doc(uid).collection('family').snapshots().map((snapshot) {
+      return snapshot.docs.map((doc) => FamilyMember.fromMap(doc.data(), doc.id)).toList();
+    });
+  }
+
+  /// Stream of Notifications from `users/{uid}/notifications`
+  Stream<List<AppNotification>> streamNotifications(String uid) {
+    if (uid.isEmpty) return Stream.value([]);
+    return _usersCol.doc(uid).collection('notifications').snapshots().map((snapshot) {
+      return snapshot.docs.map((doc) => AppNotification.fromMap(doc.data(), doc.id)).toList();
+    });
+  }
+
+  // ==========================================
+  // 3. Create, Update & Delete Mutations (Firebase Operations)
+  // ==========================================
+
+  /// Save Product: `users/{uid}/products/{productId}`
   Future<void> saveProduct(String uid, ProductItem product) async {
     if (uid.isEmpty) return;
     try {
@@ -59,36 +143,24 @@ class FirestoreService {
             product.toMap(),
             SetOptions(merge: true),
           );
-      debugPrint('[FirestoreService] Product saved: ${product.name} (id: ${product.id})');
+      debugPrint('[FirestoreService] Product saved to Firebase: ${product.name} (id: ${product.id})');
     } catch (e) {
       debugPrint('[FirestoreService] Error saving product: $e');
     }
   }
 
-  /// 4. Delete Product: `users/{uid}/products/{productId}`
+  /// Delete Product: `users/{uid}/products/{productId}`
   Future<void> deleteProduct(String uid, String productId) async {
     if (uid.isEmpty) return;
     try {
       await _usersCol.doc(uid).collection('products').doc(productId).delete();
-      debugPrint('[FirestoreService] Product deleted: $productId');
+      debugPrint('[FirestoreService] Product deleted from Firebase: $productId');
     } catch (e) {
       debugPrint('[FirestoreService] Error deleting product: $e');
     }
   }
 
-  /// 5. Fetch all Products for a user
-  Future<List<ProductItem>> fetchProducts(String uid) async {
-    if (uid.isEmpty) return [];
-    try {
-      final snapshot = await _usersCol.doc(uid).collection('products').get();
-      return snapshot.docs.map((doc) => ProductItem.fromMap(doc.data(), doc.id)).toList();
-    } catch (e) {
-      debugPrint('[FirestoreService] Error fetching products: $e');
-      return [];
-    }
-  }
-
-  /// 6. Save Expense: `users/{uid}/expenses/{expenseId}`
+  /// Save Expense: `users/{uid}/expenses/{expenseId}`
   Future<void> saveExpense(String uid, ExpenseRecord expense) async {
     if (uid.isEmpty) return;
     try {
@@ -96,39 +168,24 @@ class FirestoreService {
             expense.toMap(),
             SetOptions(merge: true),
           );
-      debugPrint('[FirestoreService] Expense saved: ${expense.productName} - ₹${expense.amount}');
+      debugPrint('[FirestoreService] Expense saved to Firebase: ₹${expense.amount}');
     } catch (e) {
       debugPrint('[FirestoreService] Error saving expense: $e');
     }
   }
 
-  /// 7. Fetch all Expenses for a user
-  Future<List<ExpenseRecord>> fetchExpenses(String uid) async {
-    if (uid.isEmpty) return [];
-    try {
-      final snapshot = await _usersCol.doc(uid).collection('expenses').get();
-      return snapshot.docs.map((doc) => ExpenseRecord.fromMap(doc.data(), doc.id)).toList();
-    } catch (e) {
-      debugPrint('[FirestoreService] Error fetching expenses: $e');
-      return [];
-    }
-  }
-
-  /// 8. Save Claim: `users/{uid}/claims/{claimId}`
-  Future<void> saveClaim(String uid, WarrantyClaim claim) async {
+  /// Delete Expense: `users/{uid}/expenses/{expenseId}`
+  Future<void> deleteExpense(String uid, String expenseId) async {
     if (uid.isEmpty) return;
     try {
-      await _usersCol.doc(uid).collection('claims').doc(claim.id).set(
-            claim.toMap(),
-            SetOptions(merge: true),
-          );
-      debugPrint('[FirestoreService] Claim saved: ${claim.ticketNumber}');
+      await _usersCol.doc(uid).collection('expenses').doc(expenseId).delete();
+      debugPrint('[FirestoreService] Expense deleted from Firebase: $expenseId');
     } catch (e) {
-      debugPrint('[FirestoreService] Error saving claim: $e');
+      debugPrint('[FirestoreService] Error deleting expense: $e');
     }
   }
 
-  /// 8.1 Save Service: `users/{uid}/services/{serviceId}`
+  /// Save Service: `users/{uid}/services/{serviceId}`
   Future<void> saveService(String uid, ServiceRecord service) async {
     if (uid.isEmpty) return;
     try {
@@ -136,13 +193,49 @@ class FirestoreService {
             service.toMap(),
             SetOptions(merge: true),
           );
-      debugPrint('[FirestoreService] Service record saved: ${service.serviceType}');
+      debugPrint('[FirestoreService] Service record saved to Firebase: ${service.serviceType}');
     } catch (e) {
       debugPrint('[FirestoreService] Error saving service record: $e');
     }
   }
 
-  /// 9. Save Document / Invoice: `users/{uid}/documents/{docId}`
+  /// Delete Service: `users/{uid}/services/{serviceId}`
+  Future<void> deleteService(String uid, String serviceId) async {
+    if (uid.isEmpty) return;
+    try {
+      await _usersCol.doc(uid).collection('services').doc(serviceId).delete();
+      debugPrint('[FirestoreService] Service record deleted from Firebase: $serviceId');
+    } catch (e) {
+      debugPrint('[FirestoreService] Error deleting service record: $e');
+    }
+  }
+
+  /// Save Claim: `users/{uid}/claims/{claimId}`
+  Future<void> saveClaim(String uid, WarrantyClaim claim) async {
+    if (uid.isEmpty) return;
+    try {
+      await _usersCol.doc(uid).collection('claims').doc(claim.id).set(
+            claim.toMap(),
+            SetOptions(merge: true),
+          );
+      debugPrint('[FirestoreService] Claim saved to Firebase: ${claim.ticketNumber}');
+    } catch (e) {
+      debugPrint('[FirestoreService] Error saving claim: $e');
+    }
+  }
+
+  /// Delete Claim: `users/{uid}/claims/{claimId}`
+  Future<void> deleteClaim(String uid, String claimId) async {
+    if (uid.isEmpty) return;
+    try {
+      await _usersCol.doc(uid).collection('claims').doc(claimId).delete();
+      debugPrint('[FirestoreService] Claim deleted from Firebase: $claimId');
+    } catch (e) {
+      debugPrint('[FirestoreService] Error deleting claim: $e');
+    }
+  }
+
+  /// Save Document: `users/{uid}/documents/{docId}`
   Future<void> saveDocument(String uid, DocumentRecord docRecord) async {
     if (uid.isEmpty) return;
     try {
@@ -150,13 +243,24 @@ class FirestoreService {
             docRecord.toMap(),
             SetOptions(merge: true),
           );
-      debugPrint('[FirestoreService] Document saved: ${docRecord.name}');
+      debugPrint('[FirestoreService] Document saved to Firebase: ${docRecord.name}');
     } catch (e) {
       debugPrint('[FirestoreService] Error saving document: $e');
     }
   }
 
-  /// 10. Save AMC: `users/{uid}/amcs/{amcId}`
+  /// Delete Document: `users/{uid}/documents/{docId}`
+  Future<void> deleteDocument(String uid, String docId) async {
+    if (uid.isEmpty) return;
+    try {
+      await _usersCol.doc(uid).collection('documents').doc(docId).delete();
+      debugPrint('[FirestoreService] Document deleted from Firebase: $docId');
+    } catch (e) {
+      debugPrint('[FirestoreService] Error deleting document: $e');
+    }
+  }
+
+  /// Save AMC: `users/{uid}/amcs/{amcId}`
   Future<void> saveAMC(String uid, AMCRecord amc) async {
     if (uid.isEmpty) return;
     try {
@@ -164,58 +268,93 @@ class FirestoreService {
             amc.toMap(),
             SetOptions(merge: true),
           );
-      debugPrint('[FirestoreService] AMC saved: ${amc.productName}');
+      debugPrint('[FirestoreService] AMC saved to Firebase: ${amc.productName}');
     } catch (e) {
       debugPrint('[FirestoreService] Error saving AMC: $e');
     }
   }
 
-  /// 11. Initial Sync: Upload default items to Cloud Firestore if collection is empty
-  Future<void> syncInitialDataIfEmpty(
-    String uid, {
-    required List<ProductItem> defaultProducts,
-    required List<ExpenseRecord> defaultExpenses,
-    required List<AMCRecord> defaultAMCs,
-    required List<WarrantyClaim> defaultClaims,
-    required List<DocumentRecord> defaultDocuments,
-  }) async {
+  /// Delete AMC: `users/{uid}/amcs/{amcId}`
+  Future<void> deleteAMC(String uid, String amcId) async {
     if (uid.isEmpty) return;
     try {
-      final existing = await _usersCol.doc(uid).collection('products').limit(1).get();
-      if (existing.docs.isEmpty) {
-        debugPrint('[FirestoreService] New user detected. Seeding initial data into Firestore...');
-        final batch = _db.batch();
-
-        for (final prod in defaultProducts) {
-          final docRef = _usersCol.doc(uid).collection('products').doc(prod.id);
-          batch.set(docRef, prod.toMap());
-        }
-
-        for (final exp in defaultExpenses) {
-          final docRef = _usersCol.doc(uid).collection('expenses').doc(exp.id);
-          batch.set(docRef, exp.toMap());
-        }
-
-        for (final amc in defaultAMCs) {
-          final docRef = _usersCol.doc(uid).collection('amcs').doc(amc.id);
-          batch.set(docRef, amc.toMap());
-        }
-
-        for (final clm in defaultClaims) {
-          final docRef = _usersCol.doc(uid).collection('claims').doc(clm.id);
-          batch.set(docRef, clm.toMap());
-        }
-
-        for (final doc in defaultDocuments) {
-          final docRef = _usersCol.doc(uid).collection('documents').doc(doc.id);
-          batch.set(docRef, doc.toMap());
-        }
-
-        await batch.commit();
-        debugPrint('[FirestoreService] Seed data successfully committed to Firestore!');
-      }
+      await _usersCol.doc(uid).collection('amcs').doc(amcId).delete();
+      debugPrint('[FirestoreService] AMC deleted from Firebase: $amcId');
     } catch (e) {
-      debugPrint('[FirestoreService] Error syncing initial data: $e');
+      debugPrint('[FirestoreService] Error deleting AMC: $e');
+    }
+  }
+
+  /// Save Insurance: `users/{uid}/insurance/{insuranceId}`
+  Future<void> saveInsurance(String uid, InsurancePolicy policy) async {
+    if (uid.isEmpty) return;
+    try {
+      await _usersCol.doc(uid).collection('insurance').doc(policy.id).set(
+            policy.toMap(),
+            SetOptions(merge: true),
+          );
+      debugPrint('[FirestoreService] Insurance policy saved to Firebase: ${policy.productName}');
+    } catch (e) {
+      debugPrint('[FirestoreService] Error saving insurance: $e');
+    }
+  }
+
+  /// Delete Insurance: `users/{uid}/insurance/{insuranceId}`
+  Future<void> deleteInsurance(String uid, String insuranceId) async {
+    if (uid.isEmpty) return;
+    try {
+      await _usersCol.doc(uid).collection('insurance').doc(insuranceId).delete();
+      debugPrint('[FirestoreService] Insurance deleted from Firebase: $insuranceId');
+    } catch (e) {
+      debugPrint('[FirestoreService] Error deleting insurance: $e');
+    }
+  }
+
+  /// Save Family Member: `users/{uid}/family/{memberId}`
+  Future<void> saveFamilyMember(String uid, FamilyMember member) async {
+    if (uid.isEmpty) return;
+    try {
+      await _usersCol.doc(uid).collection('family').doc(member.id).set(
+            member.toMap(),
+            SetOptions(merge: true),
+          );
+      debugPrint('[FirestoreService] Family member saved to Firebase: ${member.name}');
+    } catch (e) {
+      debugPrint('[FirestoreService] Error saving family member: $e');
+    }
+  }
+
+  /// Delete Family Member: `users/{uid}/family/{memberId}`
+  Future<void> deleteFamilyMember(String uid, String memberId) async {
+    if (uid.isEmpty) return;
+    try {
+      await _usersCol.doc(uid).collection('family').doc(memberId).delete();
+      debugPrint('[FirestoreService] Family member deleted from Firebase: $memberId');
+    } catch (e) {
+      debugPrint('[FirestoreService] Error deleting family member: $e');
+    }
+  }
+
+  /// Save Notification: `users/{uid}/notifications/{notifId}`
+  Future<void> saveNotification(String uid, AppNotification notif) async {
+    if (uid.isEmpty) return;
+    try {
+      await _usersCol.doc(uid).collection('notifications').doc(notif.id).set(
+            notif.toMap(),
+            SetOptions(merge: true),
+          );
+    } catch (e) {
+      debugPrint('[FirestoreService] Error saving notification: $e');
+    }
+  }
+
+  /// Delete Notification: `users/{uid}/notifications/{notifId}`
+  Future<void> deleteNotification(String uid, String notifId) async {
+    if (uid.isEmpty) return;
+    try {
+      await _usersCol.doc(uid).collection('notifications').doc(notifId).delete();
+    } catch (e) {
+      debugPrint('[FirestoreService] Error deleting notification: $e');
     }
   }
 }

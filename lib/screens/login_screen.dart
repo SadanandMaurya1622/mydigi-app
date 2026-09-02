@@ -5,7 +5,7 @@ import '../providers/warranty_provider.dart';
 import '../services/auth_service.dart';
 import '../utils/app_theme.dart';
 import '../widgets/glass_container.dart';
-import 'splash_screen.dart';
+import 'main_navigation_host.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -56,11 +56,19 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
       if (userCredential != null && userCredential.user != null) {
         final user = userCredential.user!;
+        final realName = (user.displayName != null && user.displayName!.trim().isNotEmpty)
+            ? user.displayName!.trim()
+            : (user.email != null && user.email!.contains('@'))
+                ? user.email!.split('@').first
+                : 'Google User';
+        final realEmail = user.email ?? '';
+        final realPhoto = user.photoURL;
+
         await provider.login(
-          user.displayName ?? 'Sadanand Maurya',
-          user.email ?? 'sadanandmaurya.rj@gmail.com',
-          user.phoneNumber ?? '+91 98200 12345',
-          photoUrl: user.photoURL,
+          realName,
+          realEmail,
+          user.phoneNumber ?? '',
+          photoUrl: realPhoto,
           uid: user.uid,
         );
 
@@ -68,8 +76,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         Navigator.pushReplacement(
           context,
           PageRouteBuilder(
-            transitionDuration: const Duration(milliseconds: 450),
-            pageBuilder: (_, animation, secondaryAnimation) => const SplashScreen(),
+            transitionDuration: const Duration(milliseconds: 280),
+            pageBuilder: (_, animation, secondaryAnimation) => const MainNavigationHost(),
             transitionsBuilder: (_, animation, _, child) => FadeTransition(opacity: animation, child: child),
           ),
         );
@@ -82,104 +90,16 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     } catch (error) {
       if (!mounted) return;
       setState(() => _isLoading = false);
-      _showSignInErrorSheet(context, provider, error.toString(), isHindi);
-    }
-  }
-
-  void _showSignInErrorSheet(BuildContext context, WarrantyProvider provider, String errorMsg, bool isHindi) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        final isDark = Theme.of(context).brightness == Brightness.dark;
-        return GlassCard(
-          borderRadius: 24,
-          padding: const EdgeInsets.all(24),
-          opacity: 0.95,
-          blur: 30,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 44,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: isDark ? Colors.white30 : Colors.black26,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 18),
-              Container(
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF59E0B).withAlpha(30),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.security_update_warning_rounded, color: Color(0xFFF59E0B), size: 28),
-              ),
-              const SizedBox(height: 14),
-              Text(
-                isHindi ? 'Google साइन-इन सूचना' : 'Google Sign-In Notice',
-                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                isHindi
-                    ? 'Firebase mydigi-a2402 कनेक्टेड है। यदि डिवाइस में Google Play Services या SHA-1 प्रमाणीकरण लंबित है, तो आप डेमो मोड से भी शुरू कर सकते हैं।'
-                    : 'Firebase project (mydigi-a2402) is connected. If Google Play Services or SHA-1 is not yet registered on this test device, you can also proceed with Demo mode.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 12.5,
-                  color: isDark ? AppTheme.textMutedDark : AppTheme.textMutedLight,
-                  height: 1.4,
-                ),
-              ),
-              const SizedBox(height: 18),
-              // Demo Login Button
-              ElevatedButton.icon(
-                onPressed: () async {
-                  Navigator.pop(ctx);
-                  await provider.login(
-                    'Sadanand Maurya',
-                    'sadanandmaurya.rj@gmail.com',
-                    '+91 98200 12345',
-                    uid: 'sadanand_maurya_rj',
-                  );
-                  if (context.mounted) {
-                    Navigator.pushReplacement(
-                      context,
-                      PageRouteBuilder(
-                        transitionDuration: const Duration(milliseconds: 450),
-                        pageBuilder: (_, animation, secondaryAnimation) => const SplashScreen(),
-                        transitionsBuilder: (_, animation, _, child) => FadeTransition(opacity: animation, child: child),
-                      ),
-                    );
-                  }
-                },
-                icon: const Icon(Icons.arrow_forward_rounded, size: 18),
-                label: Text(
-                  isHindi ? 'Sadanand Maurya के रूप में जारी रखें' : 'Continue as Sadanand Maurya',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 48),
-                  backgroundColor: AppTheme.primary,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: Text(isHindi ? 'पुनः प्रयास करें' : 'Try Google Sign-In Again'),
-              ),
-            ],
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            isHindi ? 'Google साइन-इन त्रुटि: $error' : 'Google Sign-In Error: $error',
           ),
-        );
-      },
-    );
+          backgroundColor: AppTheme.danger,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
   }
 
   @override
@@ -433,11 +353,11 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                       ),
                     ),
 
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 14),
 
                     // Subtext Helper
                     Text(
-                      isHindi ? '1-Tap सुरक्षित लॉगिन • किसी पासवर्ड की ज़रूरत नहीं' : 'Fast & Secure 1-Tap Sign-In • No Password Required',
+                      isHindi ? '1-Tap सुरक्षित Google साइन-इन • Cloud Firestore पर लाइव डेटा सिंक' : '1-Tap Google Sign-In • Real-Time Sync with Cloud Firestore',
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
@@ -445,7 +365,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                       ),
                     ),
 
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 18),
 
                     // 5. Trust & Security Badges
                     Row(
@@ -454,7 +374,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                         const Icon(Icons.verified_user_rounded, size: 14, color: AppTheme.success),
                         const SizedBox(width: 6),
                         Text(
-                          isHindi ? 'Google Cloud द्वारा सत्यापित • 100% सुरक्षित' : 'Google Verified • 100% Private & Encrypted',
+                          isHindi ? 'Firebase & Google Cloud द्वारा सत्यापित • 100% सुरक्षित' : 'Firebase & Google Cloud Verified • 100% Encrypted',
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,

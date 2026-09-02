@@ -1,4 +1,4 @@
-package com.warrantyx.app.warrantyx_app
+package com.mydigi.app
 
 import io.flutter.embedding.android.FlutterActivity
 
