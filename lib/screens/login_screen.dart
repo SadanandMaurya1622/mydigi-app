@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../providers/warranty_provider.dart';
+import '../services/auth_service.dart';
 import '../utils/app_theme.dart';
 import '../widgets/glass_container.dart';
 import 'splash_screen.dart';
@@ -44,32 +45,138 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     super.dispose();
   }
 
-  void _handleGoogleSignIn() {
+  Future<void> _handleGoogleSignIn() async {
     final provider = Provider.of<WarrantyProvider>(context, listen: false);
+    final isHindi = provider.language == 'hi';
+
     setState(() => _isLoading = true);
 
-    // Simulate Google Sign-In OAuth authentication
-    Future.delayed(const Duration(milliseconds: 900), () {
+    try {
+      final userCredential = await AuthService().signInWithGoogle();
+
+      if (userCredential != null && userCredential.user != null) {
+        final user = userCredential.user!;
+        provider.login(
+          user.displayName ?? 'Sadanand Maurya',
+          user.email ?? 'sadanandmaurya.rj@gmail.com',
+          user.phoneNumber ?? '+91 98200 12345',
+          photoUrl: user.photoURL,
+          uid: user.uid,
+        );
+
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          PageRouteBuilder(
+            transitionDuration: const Duration(milliseconds: 450),
+            pageBuilder: (_, animation, secondaryAnimation) => const SplashScreen(),
+            transitionsBuilder: (_, animation, _, child) => FadeTransition(opacity: animation, child: child),
+          ),
+        );
+      } else {
+        // User dismissed the Google sign-in sheet
+        if (mounted) {
+          setState(() => _isLoading = false);
+        }
+      }
+    } catch (error) {
       if (!mounted) return;
       setState(() => _isLoading = false);
+      _showSignInErrorSheet(context, provider, error.toString(), isHindi);
+    }
+  }
 
-      // Set user profile
-      provider.login(
-        'Sadanand Gupta',
-        'sadanand.gupta@gmail.com',
-        '+91 98200 12345',
-      );
-
-      // Navigate smoothly to SplashScreen
-      Navigator.pushReplacement(
-        context,
-        PageRouteBuilder(
-          transitionDuration: const Duration(milliseconds: 450),
-          pageBuilder: (_, animation, secondaryAnimation) => const SplashScreen(),
-          transitionsBuilder: (_, animation, _, child) => FadeTransition(opacity: animation, child: child),
-        ),
-      );
-    });
+  void _showSignInErrorSheet(BuildContext context, WarrantyProvider provider, String errorMsg, bool isHindi) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        return GlassCard(
+          borderRadius: 24,
+          padding: const EdgeInsets.all(24),
+          opacity: 0.95,
+          blur: 30,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 44,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.white30 : Colors.black26,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF59E0B).withAlpha(30),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.security_update_warning_rounded, color: Color(0xFFF59E0B), size: 28),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                isHindi ? 'Google साइन-इन सूचना' : 'Google Sign-In Notice',
+                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                isHindi
+                    ? 'Firebase mydigi-a2402 कनेक्टेड है। यदि डिवाइस में Google Play Services या SHA-1 प्रमाणीकरण लंबित है, तो आप डेमो मोड से भी शुरू कर सकते हैं।'
+                    : 'Firebase project (mydigi-a2402) is connected. If Google Play Services or SHA-1 is not yet registered on this test device, you can also proceed with Demo mode.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 12.5,
+                  color: isDark ? AppTheme.textMutedDark : AppTheme.textMutedLight,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 18),
+              // Demo Login Button
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  provider.login(
+                    'Sadanand Maurya',
+                    'sadanandmaurya.rj@gmail.com',
+                    '+91 98200 12345',
+                  );
+                  Navigator.pushReplacement(
+                    context,
+                    PageRouteBuilder(
+                      transitionDuration: const Duration(milliseconds: 450),
+                      pageBuilder: (_, animation, secondaryAnimation) => const SplashScreen(),
+                      transitionsBuilder: (_, animation, _, child) => FadeTransition(opacity: animation, child: child),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.arrow_forward_rounded, size: 18),
+                label: Text(
+                  isHindi ? 'Sadanand Maurya के रूप में जारी रखें' : 'Continue as Sadanand Maurya',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 48),
+                  backgroundColor: AppTheme.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text(isHindi ? 'पुनः प्रयास करें' : 'Try Google Sign-In Again'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   @override

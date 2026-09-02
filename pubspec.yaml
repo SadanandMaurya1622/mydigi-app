@@ -38,6 +38,9 @@ dependencies:
   intl: ^0.20.3
   google_fonts: ^8.2.1
   qr_flutter: ^4.1.0
+  firebase_core: ^4.14.0
+  firebase_auth: ^6.6.1
+  google_sign_in: ^6.2.2
 
 dev_dependencies:
   flutter_test:

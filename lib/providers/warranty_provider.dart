@@ -533,11 +533,13 @@ class WarrantyProvider with ChangeNotifier {
     }
   }
 
-  void login(String name, String email, String phone) {
+  void login(String name, String email, String phone, {String? photoUrl, String? uid}) {
     _userProfile = UserProfile(
       name: name.isNotEmpty ? name : 'MyDigi User',
       email: email.isNotEmpty ? email : 'user@mydigi.app',
       phone: phone.isNotEmpty ? phone : '+91 98200 12345',
+      photoUrl: photoUrl,
+      uid: uid,
       isPro: true,
     );
     _isLoggedIn = true;

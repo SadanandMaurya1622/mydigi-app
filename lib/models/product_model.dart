@@ -341,12 +341,16 @@ class UserProfile {
   final String name;
   final String email;
   final String phone;
+  final String? photoUrl;
+  final String? uid;
   final bool isPro;
 
   UserProfile({
     required this.name,
     required this.email,
     required this.phone,
+    this.photoUrl,
+    this.uid,
     this.isPro = true,
   });
 }

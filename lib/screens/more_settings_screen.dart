@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../providers/warranty_provider.dart';
+import '../services/auth_service.dart';
 import '../utils/app_theme.dart';
 import '../widgets/glass_container.dart';
 import 'invoice_vault_screen.dart';
@@ -52,24 +53,32 @@ class MoreSettingsScreen extends StatelessWidget {
                           Container(
                             width: 52,
                             height: 52,
-                            decoration: const BoxDecoration(
-                              gradient: LinearGradient(
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
                                 colors: [AppTheme.primary, AppTheme.accent],
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
                               ),
                               shape: BoxShape.circle,
+                              image: provider.userProfile.photoUrl != null && provider.userProfile.photoUrl!.isNotEmpty
+                                  ? DecorationImage(
+                                      image: NetworkImage(provider.userProfile.photoUrl!),
+                                      fit: BoxFit.cover,
+                                    )
+                                  : null,
                             ),
-                            child: Center(
-                              child: Text(
-                                provider.userProfile.name.isNotEmpty ? provider.userProfile.name[0] : 'S',
-                                style: GoogleFonts.outfit(
-                                  color: Colors.white,
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
+                            child: provider.userProfile.photoUrl == null || provider.userProfile.photoUrl!.isEmpty
+                                ? Center(
+                                    child: Text(
+                                      provider.userProfile.name.isNotEmpty ? provider.userProfile.name[0] : 'S',
+                                      style: GoogleFonts.outfit(
+                                        color: Colors.white,
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  )
+                                : null,
                           ),
                           const SizedBox(width: 14),
 
@@ -492,14 +501,17 @@ class MoreSettingsScreen extends StatelessWidget {
             child: Text(isHindi ? 'रद्द करें' : 'Cancel'),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(ctx);
+              await AuthService().signOut();
               provider.logout();
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (_) => const LoginScreen()),
-                (route) => false,
-              );
+              if (context.mounted) {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  (route) => false,
+                );
+              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFE11D48),
