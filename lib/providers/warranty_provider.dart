@@ -556,12 +556,16 @@ class WarrantyProvider with ChangeNotifier {
   }
 
   Future<void> login(String name, String email, String phone, {String? photoUrl, String? uid}) async {
+    final effectiveUid = (uid != null && uid.isNotEmpty)
+        ? uid
+        : (email.isNotEmpty ? email.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_') : 'sadanand_maurya_user');
+
     _userProfile = UserProfile(
       name: name.isNotEmpty ? name : 'MyDigi User',
-      email: email.isNotEmpty ? email : 'user@mydigi.app',
+      email: email.isNotEmpty ? email : 'sadanandmaurya.rj@gmail.com',
       phone: phone.isNotEmpty ? phone : '+91 98200 12345',
       photoUrl: photoUrl,
-      uid: uid,
+      uid: effectiveUid,
       isPro: true,
     );
     _isLoggedIn = true;
@@ -569,16 +573,16 @@ class WarrantyProvider with ChangeNotifier {
     notifyListeners();
 
     // Sync with Cloud Firestore
-    if (uid != null && uid.isNotEmpty) {
-      // 1. Save user profile document to Firestore: users/{uid}
+    try {
+      // 1. Save user profile document to Firestore: users/{effectiveUid}
       await FirestoreService().saveUserProfile(_userProfile);
 
       // 2. Load existing user products from Firestore if any
-      final remoteProducts = await FirestoreService().fetchProducts(uid);
+      final remoteProducts = await FirestoreService().fetchProducts(effectiveUid);
       if (remoteProducts.isNotEmpty) {
         _products.clear();
         _products.addAll(remoteProducts);
-        final remoteExpenses = await FirestoreService().fetchExpenses(uid);
+        final remoteExpenses = await FirestoreService().fetchExpenses(effectiveUid);
         if (remoteExpenses.isNotEmpty) {
           _expenses.clear();
           _expenses.addAll(remoteExpenses);
@@ -587,7 +591,7 @@ class WarrantyProvider with ChangeNotifier {
       } else {
         // 3. Seed initial starter products to Firestore for new user so they appear immediately in Firebase Console!
         await FirestoreService().syncInitialDataIfEmpty(
-          uid,
+          effectiveUid,
           defaultProducts: _products,
           defaultExpenses: _expenses,
           defaultAMCs: _amcRecords,
@@ -595,6 +599,8 @@ class WarrantyProvider with ChangeNotifier {
           defaultDocuments: _documents,
         );
       }
+    } catch (e) {
+      debugPrint('[WarrantyProvider] Firestore sync notice: $e');
     }
   }
 

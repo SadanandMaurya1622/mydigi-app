@@ -139,21 +139,24 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
               const SizedBox(height: 18),
               // Demo Login Button
               ElevatedButton.icon(
-                onPressed: () {
+                onPressed: () async {
                   Navigator.pop(ctx);
-                  provider.login(
+                  await provider.login(
                     'Sadanand Maurya',
                     'sadanandmaurya.rj@gmail.com',
                     '+91 98200 12345',
+                    uid: 'sadanand_maurya_rj',
                   );
-                  Navigator.pushReplacement(
-                    context,
-                    PageRouteBuilder(
-                      transitionDuration: const Duration(milliseconds: 450),
-                      pageBuilder: (_, animation, secondaryAnimation) => const SplashScreen(),
-                      transitionsBuilder: (_, animation, _, child) => FadeTransition(opacity: animation, child: child),
-                    ),
-                  );
+                  if (context.mounted) {
+                    Navigator.pushReplacement(
+                      context,
+                      PageRouteBuilder(
+                        transitionDuration: const Duration(milliseconds: 450),
+                        pageBuilder: (_, animation, secondaryAnimation) => const SplashScreen(),
+                        transitionsBuilder: (_, animation, _, child) => FadeTransition(opacity: animation, child: child),
+                      ),
+                    );
+                  }
                 },
                 icon: const Icon(Icons.arrow_forward_rounded, size: 18),
                 label: Text(
