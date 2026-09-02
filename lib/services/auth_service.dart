@@ -1,6 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter/foundation.dart';
+import '../models/product_model.dart';
+import 'firestore_service.dart';
 
 /// Service responsible for managing Firebase Authentication and Google Sign-In.
 class AuthService {
@@ -44,7 +46,23 @@ class AuthService {
 
       // 4. Authenticate with Firebase using the Google credential
       final UserCredential userCredential = await _auth.signInWithCredential(credential);
-      debugPrint('[AuthService] Successfully signed in: ${userCredential.user?.email}');
+      final user = userCredential.user;
+      debugPrint('[AuthService] Successfully signed in: ${user?.email}');
+
+      // 5. Automatically create/update User record in Cloud Firestore
+      if (user != null) {
+        await FirestoreService().saveUserProfile(
+          UserProfile(
+            name: user.displayName ?? 'Google User',
+            email: user.email ?? '',
+            phone: user.phoneNumber ?? '',
+            photoUrl: user.photoURL,
+            uid: user.uid,
+            isPro: true,
+          ),
+        );
+      }
+
       return userCredential;
     } on FirebaseAuthException catch (e) {
       debugPrint('[AuthService] FirebaseAuthException [${e.code}]: ${e.message}');

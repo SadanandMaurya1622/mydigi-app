@@ -56,7 +56,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
       if (userCredential != null && userCredential.user != null) {
         final user = userCredential.user!;
-        provider.login(
+        await provider.login(
           user.displayName ?? 'Sadanand Maurya',
           user.email ?? 'sadanandmaurya.rj@gmail.com',
           user.phoneNumber ?? '+91 98200 12345',

@@ -56,6 +56,62 @@ class ProductItem {
       costBreakdown.amc +
       costBreakdown.other;
 
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'category': category,
+      'brand': brand,
+      'modelNumber': modelNumber,
+      'serialNumber': serialNumber,
+      'imeiNumber': imeiNumber,
+      'purchaseDate': purchaseDate,
+      'purchasePrice': purchasePrice,
+      'sellerName': sellerName,
+      'sellerContact': sellerContact,
+      'invoiceNumber': invoiceNumber,
+      'warrantyPeriod': warrantyPeriod,
+      'warrantyStartDate': warrantyStartDate,
+      'warrantyEndDate': warrantyEndDate,
+      'warrantyStatus': warrantyStatus,
+      'daysRemaining': daysRemaining,
+      'extendedWarranty': extendedWarranty,
+      'hasAMC': hasAMC,
+      'imageUrl': imageUrl,
+      'costBreakdown': costBreakdown.toMap(),
+      'notes': notes,
+    };
+  }
+
+  factory ProductItem.fromMap(Map<String, dynamic> map, [String? docId]) {
+    return ProductItem(
+      id: docId ?? map['id'] ?? '',
+      name: map['name'] ?? '',
+      category: map['category'] ?? 'Other',
+      brand: map['brand'] ?? '',
+      modelNumber: map['modelNumber'] ?? '',
+      serialNumber: map['serialNumber'] ?? '',
+      imeiNumber: map['imeiNumber'],
+      purchaseDate: map['purchaseDate'] ?? '',
+      purchasePrice: (map['purchasePrice'] as num?)?.toDouble() ?? 0.0,
+      sellerName: map['sellerName'] ?? '',
+      sellerContact: map['sellerContact'] ?? '',
+      invoiceNumber: map['invoiceNumber'] ?? '',
+      warrantyPeriod: map['warrantyPeriod'] ?? '',
+      warrantyStartDate: map['warrantyStartDate'] ?? '',
+      warrantyEndDate: map['warrantyEndDate'] ?? '',
+      warrantyStatus: map['warrantyStatus'] ?? 'Active',
+      daysRemaining: (map['daysRemaining'] as num?)?.toInt() ?? 0,
+      extendedWarranty: map['extendedWarranty'] ?? false,
+      hasAMC: map['hasAMC'] ?? false,
+      imageUrl: map['imageUrl'] ?? 'https://images.unsplash.com/photo-1550009158-9ebf69173e03?auto=format&fit=crop&w=800&q=80',
+      costBreakdown: map['costBreakdown'] != null
+          ? CostBreakdown.fromMap(Map<String, dynamic>.from(map['costBreakdown']))
+          : CostBreakdown(purchase: (map['purchasePrice'] as num?)?.toDouble() ?? 0.0),
+      notes: map['notes'],
+    );
+  }
+
   ProductItem copyWith({
     String? id,
     String? name,
@@ -126,6 +182,30 @@ class CostBreakdown {
     this.other = 0,
   });
 
+  Map<String, dynamic> toMap() {
+    return {
+      'purchase': purchase,
+      'installation': installation,
+      'maintenance': maintenance,
+      'repair': repair,
+      'accessories': accessories,
+      'amc': amc,
+      'other': other,
+    };
+  }
+
+  factory CostBreakdown.fromMap(Map<String, dynamic> map) {
+    return CostBreakdown(
+      purchase: (map['purchase'] as num?)?.toDouble() ?? 0.0,
+      installation: (map['installation'] as num?)?.toDouble() ?? 0.0,
+      maintenance: (map['maintenance'] as num?)?.toDouble() ?? 0.0,
+      repair: (map['repair'] as num?)?.toDouble() ?? 0.0,
+      accessories: (map['accessories'] as num?)?.toDouble() ?? 0.0,
+      amc: (map['amc'] as num?)?.toDouble() ?? 0.0,
+      other: (map['other'] as num?)?.toDouble() ?? 0.0,
+    );
+  }
+
   CostBreakdown copyWith({
     double? purchase,
     double? installation,
@@ -169,6 +249,34 @@ class ExpenseRecord {
     this.notes,
     this.invoiceUrl,
   });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'productId': productId,
+      'productName': productName,
+      'category': category,
+      'amount': amount,
+      'date': date,
+      'serviceProvider': serviceProvider,
+      'notes': notes,
+      'invoiceUrl': invoiceUrl,
+    };
+  }
+
+  factory ExpenseRecord.fromMap(Map<String, dynamic> map, [String? docId]) {
+    return ExpenseRecord(
+      id: docId ?? map['id'] ?? '',
+      productId: map['productId'] ?? '',
+      productName: map['productName'] ?? '',
+      category: map['category'] ?? 'Maintenance',
+      amount: (map['amount'] as num?)?.toDouble() ?? 0.0,
+      date: map['date'] ?? '',
+      serviceProvider: map['serviceProvider'] ?? '',
+      notes: map['notes'],
+      invoiceUrl: map['invoiceUrl'],
+    );
+  }
 }
 
 class ServiceRecord {
@@ -195,6 +303,36 @@ class ServiceRecord {
     this.description,
     this.nextServiceDate,
   });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'productId': productId,
+      'productName': productName,
+      'date': date,
+      'serviceType': serviceType,
+      'cost': cost,
+      'technicianName': technicianName,
+      'serviceProvider': serviceProvider,
+      'description': description,
+      'nextServiceDate': nextServiceDate,
+    };
+  }
+
+  factory ServiceRecord.fromMap(Map<String, dynamic> map, [String? docId]) {
+    return ServiceRecord(
+      id: docId ?? map['id'] ?? '',
+      productId: map['productId'] ?? '',
+      productName: map['productName'] ?? '',
+      date: map['date'] ?? '',
+      serviceType: map['serviceType'] ?? '',
+      cost: (map['cost'] as num?)?.toDouble() ?? 0.0,
+      technicianName: map['technicianName'] ?? '',
+      serviceProvider: map['serviceProvider'],
+      description: map['description'],
+      nextServiceDate: map['nextServiceDate'],
+    );
+  }
 }
 
 class DocumentRecord {
@@ -217,6 +355,32 @@ class DocumentRecord {
     required this.uploadDate,
     this.previewUrl,
   });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'productId': productId,
+      'productName': productName,
+      'name': name,
+      'type': type,
+      'size': size,
+      'uploadDate': uploadDate,
+      'previewUrl': previewUrl,
+    };
+  }
+
+  factory DocumentRecord.fromMap(Map<String, dynamic> map, [String? docId]) {
+    return DocumentRecord(
+      id: docId ?? map['id'] ?? '',
+      productId: map['productId'] ?? '',
+      productName: map['productName'] ?? '',
+      name: map['name'] ?? '',
+      type: map['type'] ?? 'Invoice',
+      size: map['size'] ?? '',
+      uploadDate: map['uploadDate'] ?? '',
+      previewUrl: map['previewUrl'],
+    );
+  }
 }
 
 class AMCRecord {
@@ -245,6 +409,38 @@ class AMCRecord {
     required this.contactNumber,
     this.freeServicesRemaining = 2,
   });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'productId': productId,
+      'productName': productName,
+      'provider': provider,
+      'planName': planName,
+      'startDate': startDate,
+      'endDate': endDate,
+      'cost': cost,
+      'status': status,
+      'contactNumber': contactNumber,
+      'freeServicesRemaining': freeServicesRemaining,
+    };
+  }
+
+  factory AMCRecord.fromMap(Map<String, dynamic> map, [String? docId]) {
+    return AMCRecord(
+      id: docId ?? map['id'] ?? '',
+      productId: map['productId'] ?? '',
+      productName: map['productName'] ?? '',
+      provider: map['provider'] ?? '',
+      planName: map['planName'] ?? '',
+      startDate: map['startDate'] ?? '',
+      endDate: map['endDate'] ?? '',
+      cost: (map['cost'] as num?)?.toDouble() ?? 0.0,
+      status: map['status'] ?? 'Active',
+      contactNumber: map['contactNumber'] ?? '',
+      freeServicesRemaining: (map['freeServicesRemaining'] as num?)?.toInt() ?? 2,
+    );
+  }
 }
 
 class InsurancePolicy {
@@ -271,6 +467,36 @@ class InsurancePolicy {
     required this.expiryDate,
     required this.status,
   });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'productId': productId,
+      'productName': productName,
+      'provider': provider,
+      'policyNumber': policyNumber,
+      'premiumAmount': premiumAmount,
+      'coverageAmount': coverageAmount,
+      'startDate': startDate,
+      'expiryDate': expiryDate,
+      'status': status,
+    };
+  }
+
+  factory InsurancePolicy.fromMap(Map<String, dynamic> map, [String? docId]) {
+    return InsurancePolicy(
+      id: docId ?? map['id'] ?? '',
+      productId: map['productId'] ?? '',
+      productName: map['productName'] ?? '',
+      provider: map['provider'] ?? '',
+      policyNumber: map['policyNumber'] ?? '',
+      premiumAmount: (map['premiumAmount'] as num?)?.toDouble() ?? 0.0,
+      coverageAmount: (map['coverageAmount'] as num?)?.toDouble() ?? 0.0,
+      startDate: map['startDate'] ?? '',
+      expiryDate: map['expiryDate'] ?? '',
+      status: map['status'] ?? 'Active',
+    );
+  }
 }
 
 class WarrantyClaim {
@@ -297,6 +523,36 @@ class WarrantyClaim {
     this.technicianAssigned = 'Pending Allocation',
     this.claimAmount = 0.0,
   });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'productId': productId,
+      'productName': productName,
+      'ticketNumber': ticketNumber,
+      'claimDate': claimDate,
+      'description': description,
+      'serviceCenter': serviceCenter,
+      'status': status,
+      'technicianAssigned': technicianAssigned,
+      'claimAmount': claimAmount,
+    };
+  }
+
+  factory WarrantyClaim.fromMap(Map<String, dynamic> map, [String? docId]) {
+    return WarrantyClaim(
+      id: docId ?? map['id'] ?? '',
+      productId: map['productId'] ?? '',
+      productName: map['productName'] ?? '',
+      ticketNumber: map['ticketNumber'] ?? '',
+      claimDate: map['claimDate'] ?? '',
+      description: map['description'] ?? '',
+      serviceCenter: map['serviceCenter'] ?? '',
+      status: map['status'] ?? 'Submitted',
+      technicianAssigned: map['technicianAssigned'] ?? 'Pending Allocation',
+      claimAmount: (map['claimAmount'] as num?)?.toDouble() ?? 0.0,
+    );
+  }
 }
 
 class FamilyMember {
@@ -315,6 +571,28 @@ class FamilyMember {
     required this.email,
     required this.permissions,
   });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'role': role,
+      'relation': relation,
+      'email': email,
+      'permissions': permissions,
+    };
+  }
+
+  factory FamilyMember.fromMap(Map<String, dynamic> map, [String? docId]) {
+    return FamilyMember(
+      id: docId ?? map['id'] ?? '',
+      name: map['name'] ?? '',
+      role: map['role'] ?? '',
+      relation: map['relation'] ?? '',
+      email: map['email'] ?? '',
+      permissions: map['permissions'] ?? '',
+    );
+  }
 }
 
 class AppNotification {
@@ -335,6 +613,30 @@ class AppNotification {
     this.unread = true,
     this.productId,
   });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'title': title,
+      'message': message,
+      'date': date,
+      'type': type,
+      'unread': unread,
+      'productId': productId,
+    };
+  }
+
+  factory AppNotification.fromMap(Map<String, dynamic> map, [String? docId]) {
+    return AppNotification(
+      id: docId ?? map['id'] ?? '',
+      title: map['title'] ?? '',
+      message: map['message'] ?? '',
+      date: map['date'] ?? '',
+      type: map['type'] ?? 'system',
+      unread: map['unread'] ?? true,
+      productId: map['productId'],
+    );
+  }
 }
 
 class UserProfile {
@@ -353,4 +655,27 @@ class UserProfile {
     this.uid,
     this.isPro = true,
   });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'name': name,
+      'email': email,
+      'phone': phone,
+      'photoUrl': photoUrl,
+      'uid': uid,
+      'isPro': isPro,
+      'lastActive': DateTime.now().toIso8601String(),
+    };
+  }
+
+  factory UserProfile.fromMap(Map<String, dynamic> map, [String? uid]) {
+    return UserProfile(
+      name: map['name'] ?? '',
+      email: map['email'] ?? '',
+      phone: map['phone'] ?? '',
+      photoUrl: map['photoUrl'],
+      uid: uid ?? map['uid'],
+      isPro: map['isPro'] ?? true,
+    );
+  }
 }

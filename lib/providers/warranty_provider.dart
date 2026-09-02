@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/product_model.dart';
+import '../services/firestore_service.dart';
 
 class WarrantyProvider with ChangeNotifier {
   bool _isDarkMode = false;
@@ -441,19 +442,22 @@ class WarrantyProvider with ChangeNotifier {
   void addProduct(ProductItem product) {
     _products.insert(0, product);
     // Add default invoice record
-    _documents.insert(
-      0,
-      DocumentRecord(
-        id: 'doc-${DateTime.now().millisecondsSinceEpoch}',
-        productId: product.id,
-        productName: product.name,
-        name: '${product.brand}_Invoice.pdf',
-        type: 'Invoice',
-        size: '1.4 MB',
-        uploadDate: 'Just now',
-      ),
+    final doc = DocumentRecord(
+      id: 'doc-${DateTime.now().millisecondsSinceEpoch}',
+      productId: product.id,
+      productName: product.name,
+      name: '${product.brand}_Invoice.pdf',
+      type: 'Invoice',
+      size: '1.4 MB',
+      uploadDate: 'Just now',
     );
+    _documents.insert(0, doc);
     notifyListeners();
+
+    if (_userProfile.uid != null && _userProfile.uid!.isNotEmpty) {
+      FirestoreService().saveProduct(_userProfile.uid!, product);
+      FirestoreService().saveDocument(_userProfile.uid!, doc);
+    }
   }
 
   void updateProduct(ProductItem product) {
@@ -461,6 +465,9 @@ class WarrantyProvider with ChangeNotifier {
     if (index != -1) {
       _products[index] = product;
       notifyListeners();
+      if (_userProfile.uid != null && _userProfile.uid!.isNotEmpty) {
+        FirestoreService().saveProduct(_userProfile.uid!, product);
+      }
     }
   }
 
@@ -471,6 +478,9 @@ class WarrantyProvider with ChangeNotifier {
     _amcRecords.removeWhere((a) => a.productId == productId);
     _claims.removeWhere((c) => c.productId == productId);
     notifyListeners();
+    if (_userProfile.uid != null && _userProfile.uid!.isNotEmpty) {
+      FirestoreService().deleteProduct(_userProfile.uid!, productId);
+    }
   }
 
   void addExpense(ExpenseRecord expense) {
@@ -501,21 +511,33 @@ class WarrantyProvider with ChangeNotifier {
       _products[productIndex] = p.copyWith(costBreakdown: updated);
     }
     notifyListeners();
+    if (_userProfile.uid != null && _userProfile.uid!.isNotEmpty) {
+      FirestoreService().saveExpense(_userProfile.uid!, expense);
+    }
   }
 
   void addServiceRecord(ServiceRecord service) {
     _services.insert(0, service);
     notifyListeners();
+    if (_userProfile.uid != null && _userProfile.uid!.isNotEmpty) {
+      FirestoreService().saveService(_userProfile.uid!, service);
+    }
   }
 
   void addClaim(WarrantyClaim claim) {
     _claims.insert(0, claim);
     notifyListeners();
+    if (_userProfile.uid != null && _userProfile.uid!.isNotEmpty) {
+      FirestoreService().saveClaim(_userProfile.uid!, claim);
+    }
   }
 
   void addDocument(DocumentRecord document) {
     _documents.insert(0, document);
     notifyListeners();
+    if (_userProfile.uid != null && _userProfile.uid!.isNotEmpty) {
+      FirestoreService().saveDocument(_userProfile.uid!, document);
+    }
   }
 
   void markAllNotificationsAsRead() {
@@ -533,7 +555,7 @@ class WarrantyProvider with ChangeNotifier {
     }
   }
 
-  void login(String name, String email, String phone, {String? photoUrl, String? uid}) {
+  Future<void> login(String name, String email, String phone, {String? photoUrl, String? uid}) async {
     _userProfile = UserProfile(
       name: name.isNotEmpty ? name : 'MyDigi User',
       email: email.isNotEmpty ? email : 'user@mydigi.app',
@@ -545,6 +567,35 @@ class WarrantyProvider with ChangeNotifier {
     _isLoggedIn = true;
     _hasCompletedOnboarding = true;
     notifyListeners();
+
+    // Sync with Cloud Firestore
+    if (uid != null && uid.isNotEmpty) {
+      // 1. Save user profile document to Firestore: users/{uid}
+      await FirestoreService().saveUserProfile(_userProfile);
+
+      // 2. Load existing user products from Firestore if any
+      final remoteProducts = await FirestoreService().fetchProducts(uid);
+      if (remoteProducts.isNotEmpty) {
+        _products.clear();
+        _products.addAll(remoteProducts);
+        final remoteExpenses = await FirestoreService().fetchExpenses(uid);
+        if (remoteExpenses.isNotEmpty) {
+          _expenses.clear();
+          _expenses.addAll(remoteExpenses);
+        }
+        notifyListeners();
+      } else {
+        // 3. Seed initial starter products to Firestore for new user so they appear immediately in Firebase Console!
+        await FirestoreService().syncInitialDataIfEmpty(
+          uid,
+          defaultProducts: _products,
+          defaultExpenses: _expenses,
+          defaultAMCs: _amcRecords,
+          defaultClaims: _claims,
+          defaultDocuments: _documents,
+        );
+      }
+    }
   }
 
   void logout() {
