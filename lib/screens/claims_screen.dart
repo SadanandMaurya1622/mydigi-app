@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../models/product_model.dart';
 import '../providers/warranty_provider.dart';
@@ -49,7 +48,7 @@ class _ClaimsScreenState extends State<ClaimsScreen> {
                     children: [
                       Text(
                         AppTranslations.tr('claimWarranty', lang),
-                        style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18),
+                        style: AppTheme.font(fontWeight: FontWeight.bold, fontSize: 18),
                       ),
                       IconButton(
                         icon: const Icon(Icons.close),
@@ -184,7 +183,7 @@ class _ClaimsScreenState extends State<ClaimsScreen> {
         scrolledUnderElevation: 0,
         title: Text(
           AppTranslations.tr('claims', lang),
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18),
+          style: AppTheme.font(fontWeight: FontWeight.bold, fontSize: 18),
         ),
       ),
       body: GlassScaffoldBackground(
@@ -199,6 +198,7 @@ class _ClaimsScreenState extends State<ClaimsScreen> {
                   borderRadius: 22,
                   padding: const EdgeInsets.all(16),
                   tintColor: const Color(0xFFEC4899),
+                  isSolidGradient: true,
                   opacity: 0.88,
                   blur: 24,
                   child: Row(
@@ -234,7 +234,7 @@ class _ClaimsScreenState extends State<ClaimsScreen> {
 
                 Text(
                   'Active & Recent Claims (${provider.claims.length})',
-                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16),
+                  style: AppTheme.font(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
                 const SizedBox(height: 12),
 
@@ -272,7 +272,7 @@ class _ClaimsScreenState extends State<ClaimsScreen> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(clm.ticketNumber, style: GoogleFonts.outfit(fontWeight: FontWeight.w900, fontSize: 15, color: AppTheme.primary)),
+                              Text(clm.ticketNumber, style: AppTheme.font(fontWeight: FontWeight.w900, fontSize: 15, color: AppTheme.primary)),
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                 decoration: BoxDecoration(

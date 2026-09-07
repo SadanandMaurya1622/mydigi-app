@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../models/product_model.dart';
 import '../providers/warranty_provider.dart';
@@ -174,7 +173,7 @@ class _ScannerScreenState extends State<ScannerScreen> with SingleTickerProvider
         iconTheme: const IconThemeData(color: Colors.white),
         title: Text(
           AppTranslations.tr('aiScannerTitle', lang),
-          style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+          style: AppTheme.font(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
         ),
       ),
       body: GlassScaffoldBackground(
@@ -380,7 +379,7 @@ class _ScannerScreenState extends State<ScannerScreen> with SingleTickerProvider
                               const SizedBox(width: 8),
                               Text(
                                 'AI Extracted Data (Editable)',
-                                style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                                style: AppTheme.font(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
                               ),
                             ],
                           ),

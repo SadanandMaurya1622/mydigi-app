@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../providers/warranty_provider.dart';
 import '../utils/app_theme.dart';
@@ -43,7 +42,7 @@ class _InvoiceVaultScreenState extends State<InvoiceVaultScreen> {
         scrolledUnderElevation: 0,
         title: Text(
           AppTranslations.tr('vault', lang),
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18),
+          style: AppTheme.font(fontWeight: FontWeight.bold, fontSize: 18),
         ),
         actions: [
           IconButton(
@@ -68,6 +67,7 @@ class _InvoiceVaultScreenState extends State<InvoiceVaultScreen> {
                   borderRadius: 22,
                   padding: const EdgeInsets.all(16),
                   tintColor: const Color(0xFF1E293B),
+                  isSolidGradient: true,
                   opacity: 0.88,
                   blur: 24,
                   child: Row(

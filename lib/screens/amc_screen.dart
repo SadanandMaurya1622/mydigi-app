@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../models/product_model.dart';
 import '../providers/warranty_provider.dart';
@@ -59,7 +58,7 @@ class _AMCScreenState extends State<AMCScreen> with SingleTickerProviderStateMix
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Add AMC Contract', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18)),
+                      Text('Add AMC Contract', style: AppTheme.font(fontWeight: FontWeight.bold, fontSize: 18)),
                       IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(modalCtx)),
                     ],
                   ),
@@ -265,7 +264,7 @@ class _AMCScreenState extends State<AMCScreen> with SingleTickerProviderStateMix
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Add Insurance Policy', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18)),
+                      Text('Add Insurance Policy', style: AppTheme.font(fontWeight: FontWeight.bold, fontSize: 18)),
                       IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(modalCtx)),
                     ],
                   ),
@@ -456,7 +455,7 @@ class _AMCScreenState extends State<AMCScreen> with SingleTickerProviderStateMix
         scrolledUnderElevation: 0,
         title: Text(
           AppTranslations.tr('amc', lang),
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18),
+          style: AppTheme.font(fontWeight: FontWeight.bold, fontSize: 18),
         ),
         bottom: TabBar(
           controller: _tabController,
@@ -486,7 +485,7 @@ class _AMCScreenState extends State<AMCScreen> with SingleTickerProviderStateMix
                             const SizedBox(height: 14),
                             Text(
                               'No AMC Contracts Added',
-                              style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16),
+                              style: AppTheme.font(fontWeight: FontWeight.bold, fontSize: 16),
                             ),
                             const SizedBox(height: 6),
                             Text(
@@ -529,7 +528,7 @@ class _AMCScreenState extends State<AMCScreen> with SingleTickerProviderStateMix
                             const SizedBox(height: 14),
                             Text(
                               'No Insurance Policies Added',
-                              style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16),
+                              style: AppTheme.font(fontWeight: FontWeight.bold, fontSize: 16),
                             ),
                             const SizedBox(height: 6),
                             Text(

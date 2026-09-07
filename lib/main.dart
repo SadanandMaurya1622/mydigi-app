@@ -4,8 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'firebase_options.dart';
 import 'providers/warranty_provider.dart';
-import 'screens/login_screen.dart';
-import 'screens/main_navigation_host.dart';
+import 'screens/splash_screen.dart';
 import 'utils/app_theme.dart';
 
 void main() async {
@@ -50,23 +49,13 @@ class MyDigiApp extends StatelessWidget {
       ],
       child: Consumer<WarrantyProvider>(
         builder: (context, provider, child) {
-          User? currentUser;
-          try {
-            if (Firebase.apps.isNotEmpty) {
-              currentUser = FirebaseAuth.instance.currentUser;
-            }
-          } catch (e) {
-            debugPrint('FirebaseAuth currentUser check: $e');
-          }
-          final isUserAuth = provider.isLoggedIn || currentUser != null;
-
           return MaterialApp(
             title: 'MyDigi',
             debugShowCheckedModeBanner: false,
             themeMode: provider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
             theme: AppTheme.lightTheme,
             darkTheme: AppTheme.darkTheme,
-            home: isUserAuth ? const MainNavigationHost() : const LoginScreen(),
+            home: const SplashScreen(),
           );
         },
       ),

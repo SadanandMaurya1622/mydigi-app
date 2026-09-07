@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../providers/warranty_provider.dart';
 import '../utils/app_theme.dart';
@@ -32,7 +31,7 @@ class AnalyticsReportsScreen extends StatelessWidget {
         scrolledUnderElevation: 0,
         title: Text(
           AppTranslations.tr('reports', lang),
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18),
+          style: AppTheme.font(fontWeight: FontWeight.bold, fontSize: 18),
         ),
         actions: [
           IconButton(
@@ -57,6 +56,7 @@ class AnalyticsReportsScreen extends StatelessWidget {
                   borderRadius: 24,
                   padding: const EdgeInsets.all(18),
                   tintColor: const Color(0xFF4F46E5),
+                  isSolidGradient: true,
                   opacity: 0.88,
                   blur: 24,
                   child: Column(
@@ -66,7 +66,7 @@ class AnalyticsReportsScreen extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(
                         '₹${totalAssets.toInt()}',
-                        style: GoogleFonts.outfit(
+                        style: AppTheme.font(
                           color: Colors.white,
                           fontSize: 28,
                           fontWeight: FontWeight.w900,
@@ -91,7 +91,7 @@ class AnalyticsReportsScreen extends StatelessWidget {
                 // Category Valuation Breakdown
                 Text(
                   'Category Asset Distribution',
-                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16),
+                  style: AppTheme.font(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
                 const SizedBox(height: 12),
                 GlassCard(
@@ -135,7 +135,7 @@ class AnalyticsReportsScreen extends StatelessWidget {
                 // Warranty Health Status Distribution
                 Text(
                   'Warranty Lifecycle Health',
-                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16),
+                  style: AppTheme.font(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
                 const SizedBox(height: 12),
                 Row(
@@ -199,7 +199,7 @@ class AnalyticsReportsScreen extends StatelessWidget {
           children: [
             Text(
               count,
-              style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.w900, color: col),
+              style: AppTheme.font(fontSize: 22, fontWeight: FontWeight.w900, color: col),
             ),
             const SizedBox(height: 2),
             Text(

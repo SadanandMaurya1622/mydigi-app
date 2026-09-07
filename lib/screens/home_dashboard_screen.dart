@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../models/product_model.dart';
 import '../providers/warranty_provider.dart';
@@ -8,11 +8,9 @@ import '../widgets/glass_container.dart';
 import 'product_detail_screen.dart';
 import 'add_product_screen.dart';
 import 'scanner_screen.dart';
-import 'expenses_screen.dart';
 import 'invoice_vault_screen.dart';
 import 'claims_screen.dart';
 import 'amc_screen.dart';
-import 'analytics_reports_screen.dart';
 import 'notifications_sheet.dart';
 
 class HomeDashboardScreen extends StatefulWidget {
@@ -23,8 +21,26 @@ class HomeDashboardScreen extends StatefulWidget {
 }
 
 class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
+  final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
-  String _selectedStatusFilter = 'All'; // 'All', 'Active', 'Expiring Soon', 'Expired'
+  String _selectedFilter = 'All'; // 'All', 'Active', 'Expiring Soon', 'Expired'
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  String _getGreeting(bool isHindi) {
+    final hour = DateTime.now().hour;
+    if (hour < 12) {
+      return isHindi ? 'सुप्रभात ☀️' : 'Good Morning ☀️';
+    } else if (hour < 17) {
+      return isHindi ? 'शुभ दोपहर 🌤️' : 'Good Afternoon 🌤️';
+    } else {
+      return isHindi ? 'शुभ संध्या 🌙' : 'Good Evening 🌙';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,17 +49,26 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isHindi = lang == 'hi';
 
-    // Filtered products on Home for instant ease of search
-    final filteredProducts = provider.products.where((p) {
+    final products = provider.products;
+    final totalCount = products.length;
+    final activeCount = products.where((p) => p.warrantyStatus == 'Active').length;
+    final expiringCount = products.where((p) => p.warrantyStatus == 'Expiring Soon').length;
+    final expiredCount = products.where((p) => p.warrantyStatus == 'Expired').length;
+    final totalValue = products.fold<double>(0.0, (sum, p) => sum + p.purchasePrice);
+
+    // Filtered list for search or status
+    final filteredProducts = products.where((p) {
       final matchesQuery = _searchQuery.isEmpty ||
           p.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          p.brand.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          p.category.toLowerCase().contains(_searchQuery.toLowerCase());
+          p.brand.toLowerCase().contains(_searchQuery.toLowerCase());
 
-      final matchesStatus = _selectedStatusFilter == 'All' || p.warrantyStatus == _selectedStatusFilter;
+      final matchesStatus = _selectedFilter == 'All' || p.warrantyStatus == _selectedFilter;
 
       return matchesQuery && matchesStatus;
     }).toList();
+
+    // Expiring soon items for gentle reminder
+    final expiringItems = products.where((p) => p.warrantyStatus == 'Expiring Soon').toList();
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -53,609 +78,554 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
         scrolledUnderElevation: 0,
         title: Row(
           children: [
+            // User Avatar
             Container(
-              width: 36,
-              height: 36,
+              width: 38,
+              height: 38,
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [AppTheme.primary, AppTheme.accent],
+                  colors: [AppTheme.primary, AppTheme.secondary],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppTheme.primary.withAlpha(90),
-                    blurRadius: 10,
-                    offset: const Offset(0, 3),
+                shape: BoxShape.circle,
+                image: provider.userProfile.photoUrl != null && provider.userProfile.photoUrl!.isNotEmpty
+                    ? DecorationImage(
+                        image: NetworkImage(provider.userProfile.photoUrl!),
+                        fit: BoxFit.cover,
+                      )
+                    : null,
+              ),
+              child: provider.userProfile.photoUrl == null || provider.userProfile.photoUrl!.isEmpty
+                  ? Center(
+                      child: Text(
+                        provider.userProfile.name.isNotEmpty ? provider.userProfile.name[0].toUpperCase() : 'U',
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
+                    )
+                  : null,
+            ),
+            const SizedBox(width: 10),
+
+            // Greeting + Name
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    _getGreeting(isHindi),
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? AppTheme.textMutedDark : AppTheme.textMutedLight,
+                    ),
+                  ),
+                  Text(
+                    provider.userProfile.name.isNotEmpty ? provider.userProfile.name : (isHindi ? 'नमस्ते' : 'Welcome'),
+                    style: AppTheme.font(fontWeight: FontWeight.w800, fontSize: 15),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
-              child: const Center(
-                child: Text(
-                  'M',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 20,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'MyDigi',
-                  style: GoogleFonts.outfit(
-                    fontWeight: FontWeight.w900,
-                    fontSize: 18,
-                  ),
-                ),
-                Text(
-                  '${isHindi ? 'नमस्ते' : 'Hello'}, ${provider.userProfile.name.split(' ').first} 👋',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: isDark ? AppTheme.textMutedDark : AppTheme.textMutedLight,
-                  ),
-                ),
-              ],
             ),
           ],
         ),
         actions: [
-          // 1-Tap Language Switcher
-          TextButton(
-            onPressed: () {
-              provider.setLanguage(lang == 'en' ? 'hi' : 'en');
+          // 1-Tap Language Switcher (Easy & Prominent)
+          GestureDetector(
+            onTap: () {
+              HapticFeedback.selectionClick();
+              provider.setLanguage(lang == 'hi' ? 'en' : 'hi');
             },
-            style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              minimumSize: Size.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-            child: GlassCard(
-              borderRadius: 14,
-              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-              opacity: 0.8,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                ),
+              ),
               child: Text(
-                lang == 'en' ? '🇮🇳 हिंदी' : '🇬🇧 EN',
-                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                lang == 'hi' ? '🇮🇳 हिंदी' : '🇬🇧 English',
+                style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
               ),
             ),
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: 8),
 
-          // Notifications Bell with Badge
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.notifications_outlined),
-                onPressed: () {
-                  showModalBottomSheet(
-                    context: context,
-                    isScrollControlled: true,
-                    backgroundColor: Colors.transparent,
-                    builder: (_) => const NotificationsSheet(),
-                  );
-                },
-              ),
-              if (provider.unreadNotificationsCount > 0)
-                Positioned(
-                  top: 10,
-                  right: 10,
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: const BoxDecoration(
-                      color: AppTheme.danger,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Text(
-                      '${provider.unreadNotificationsCount}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 9,
-                        fontWeight: FontWeight.bold,
+          // Notification Bell
+          IconButton(
+            icon: Stack(
+              children: [
+                Icon(
+                  Icons.notifications_outlined,
+                  size: 22,
+                  color: isDark ? Colors.white : const Color(0xFF1E293B),
+                ),
+                if (expiringCount > 0)
+                  Positioned(
+                    right: 0,
+                    top: 0,
+                    child: Container(
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: AppTheme.danger,
+                        shape: BoxShape.circle,
                       ),
+                    ),
+                  ),
+              ],
+            ),
+            tooltip: isHindi ? 'सूचनाएं' : 'Notifications',
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              showModalBottomSheet(
+                context: context,
+                backgroundColor: Colors.transparent,
+                isScrollControlled: true,
+                builder: (_) => const NotificationsSheet(),
+              );
+            },
+          ),
+          const SizedBox(width: 6),
+        ],
+      ),
+      body: GlassScaffoldBackground(
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(16, 6, 16, 90),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 1. SIMPLE & FRIENDLY SUMMARY CARD
+                _buildSimpleSummaryCard(
+                  context,
+                  totalCount: totalCount,
+                  totalValue: totalValue,
+                  activeCount: activeCount,
+                  expiredCount: expiredCount,
+                  isDark: isDark,
+                  isHindi: isHindi,
+                ),
+                const SizedBox(height: 16),
+
+                // 2. GENTLE EXPIRY ALERT (Only shows if something is expiring soon!)
+                if (expiringItems.isNotEmpty) ...[
+                  _buildGentleExpiryBanner(context, expiringItems.first, isDark, isHindi),
+                  const SizedBox(height: 16),
+                ],
+
+                // 3. 4 BIG & EASY ACTION BUTTONS
+                _buildEasyActionHub(context, isDark, isHindi),
+                const SizedBox(height: 18),
+
+                // 4. SEARCH BAR (Simple & Clean)
+                Container(
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withAlpha(isDark ? 30 : 6),
+                        blurRadius: 10,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: (val) => setState(() => _searchQuery = val),
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                      fontFamilyFallback: AppTheme.fontFallbacks,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: isHindi ? 'सामान या ब्रांड का नाम खोजें...' : 'Search your items or brands...',
+                      hintStyle: TextStyle(
+                        fontSize: 13,
+                        color: isDark ? AppTheme.textHintDark : AppTheme.textHintLight,
+                        fontFamilyFallback: AppTheme.fontFallbacks,
+                      ),
+                      prefixIcon: const Icon(Icons.search_rounded, size: 20, color: AppTheme.primary),
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.close_rounded, size: 18),
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() => _searchQuery = '');
+                              },
+                            )
+                          : null,
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                // 5. SIMPLE FILTER CHIPS (All, Active, Expired)
+                Row(
+                  children: [
+                    _buildFilterChip('All', isHindi ? 'सभी सामान' : 'All Items', totalCount, isDark),
+                    const SizedBox(width: 8),
+                    _buildFilterChip('Active', isHindi ? '🟢 सुरक्षित' : '🟢 Active', activeCount, isDark),
+                    const SizedBox(width: 8),
+                    _buildFilterChip('Expired', isHindi ? '🔴 समाप्त' : '🔴 Expired', expiredCount, isDark),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // 6. SECTION TITLE: RECENT ITEMS
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      isHindi ? 'आपके सुरक्षित सामान' : 'Your Saved Items',
+                      style: AppTheme.font(fontWeight: FontWeight.w800, fontSize: 16),
+                    ),
+                    if (products.isNotEmpty)
+                      Text(
+                        '${filteredProducts.length} ${isHindi ? 'दिख रहे हैं' : 'items'}',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? AppTheme.textMutedDark : AppTheme.textMutedLight,
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+
+                // 7. PRODUCT LIST (EASY TO READ CARDS)
+                if (filteredProducts.isEmpty)
+                  _buildEmptyPlaceholder(context, isDark, isHindi, products.isEmpty)
+                else
+                  ...filteredProducts.map((product) => _buildSimpleProductCard(context, product, isDark, isHindi)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // -------------------------------------------------------------
+  // 1. SIMPLE & FRIENDLY SUMMARY CARD
+  // -------------------------------------------------------------
+  Widget _buildSimpleSummaryCard(
+    BuildContext context, {
+    required int totalCount,
+    required double totalValue,
+    required int activeCount,
+    required int expiredCount,
+    required bool isDark,
+    required bool isHindi,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF3B82F6), Color(0xFF6366F1)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF3B82F6).withAlpha(80),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            isHindi ? 'कुल सुरक्षित सामान' : 'Total Saved Items',
+            style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 4),
+
+          // Big number & Value
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '$totalCount ${isHindi ? 'सामान' : 'Items'}',
+                style: AppTheme.font(
+                  color: Colors.white,
+                  fontSize: 26,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              if (totalValue > 0)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withAlpha(35),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    '₹${totalValue.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
                 ),
             ],
           ),
-          const SizedBox(width: 8),
-        ],
-      ),
-      body: GlassScaffoldBackground(
-        child: SafeArea(
-          child: RefreshIndicator(
-            onRefresh: () async {
-              await Future.delayed(const Duration(milliseconds: 500));
-            },
-            child: SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // 1. Frosted Glassy Search Bar
-                  GlassCard(
-                    borderRadius: 20,
-                    padding: EdgeInsets.zero,
-                    opacity: 0.82,
-                    blur: 24,
-                    child: TextField(
-                      onChanged: (val) => setState(() => _searchQuery = val),
-                      decoration: InputDecoration(
-                        hintText: isHindi
-                            ? 'प्रोडक्ट, बिल, या ब्रांड खोजें (Search)...'
-                            : 'Search products, warranties, or bills...',
-                        hintStyle: TextStyle(
-                          fontSize: 12.5,
-                          color: isDark ? AppTheme.textMutedDark : AppTheme.textMutedLight,
-                        ),
-                        prefixIcon: const Icon(Icons.search_rounded, size: 20, color: AppTheme.primary),
-                        suffixIcon: _searchQuery.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(Icons.clear, size: 18),
-                                onPressed: () => setState(() => _searchQuery = ''),
-                              )
-                            : IconButton(
-                                icon: const Icon(Icons.qr_code_scanner, size: 20, color: AppTheme.primary),
-                                tooltip: 'Scan Bill',
-                                onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(builder: (_) => const ScannerScreen()),
-                                  );
-                                },
-                              ),
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
+          const SizedBox(height: 12),
 
-                  // 2. Glassy KPI Stats Grid (Tappable to filter)
-                  Row(
-                    children: [
-                      _buildGlassStatCard(
-                        title: isHindi ? 'कुल प्रोडक्ट्स' : 'Total Assets',
-                        value: '${provider.products.length}',
-                        sub: '₹${(provider.totalAssetValue / 100000).toStringAsFixed(1)}L ${isHindi ? 'मूल्य' : 'Value'}',
-                        color: AppTheme.primary,
-                        icon: Icons.inventory_2_outlined,
-                        isSelected: _selectedStatusFilter == 'All',
-                        onTap: () => setState(() => _selectedStatusFilter = 'All'),
-                        isDark: isDark,
-                      ),
-                      const SizedBox(width: 10),
-                      _buildGlassStatCard(
-                        title: isHindi ? 'समाप्त होने वाली' : 'Expiring Soon',
-                        value: '${provider.expiringSoonCount}',
-                        sub: isHindi ? 'ध्यान दें (Alert)' : 'Action Needed',
-                        color: AppTheme.warning,
-                        icon: Icons.warning_amber_rounded,
-                        isSelected: _selectedStatusFilter == 'Expiring Soon',
-                        onTap: () => setState(() => _selectedStatusFilter = _selectedStatusFilter == 'Expiring Soon' ? 'All' : 'Expiring Soon'),
-                        isDark: isDark,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      _buildGlassStatCard(
-                        title: isHindi ? 'सक्रिय वारंटी' : 'Active Safe',
-                        value: '${provider.activeCount}',
-                        sub: isHindi ? '100% सुरक्षित' : '100% Protected',
-                        color: AppTheme.success,
-                        icon: Icons.verified_user_outlined,
-                        isSelected: _selectedStatusFilter == 'Active',
-                        onTap: () => setState(() => _selectedStatusFilter = _selectedStatusFilter == 'Active' ? 'All' : 'Active'),
-                        isDark: isDark,
-                      ),
-                      const SizedBox(width: 10),
-                      _buildGlassStatCard(
-                        title: isHindi ? 'कुल खर्चे' : 'Expenses & TCO',
-                        value: '₹${provider.totalExpenseValue.toInt()}',
-                        sub: isHindi ? 'सर्विस व AMC' : 'Service & AMC',
-                        color: AppTheme.secondary,
-                        icon: Icons.receipt_long_outlined,
-                        isSelected: false,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => const ExpensesScreen()),
-                          );
-                        },
-                        isDark: isDark,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 18),
-
-                  // 3. Urgent Expiry Action Card (Only when products are expiring)
-                  if (provider.expiringSoonCount > 0)
-                    GlassCard(
-                      borderRadius: 22,
-                      padding: const EdgeInsets.all(16),
-                      margin: const EdgeInsets.only(bottom: 18),
-                      tintColor: const Color(0xFFE11D48),
-                      opacity: 0.88,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withAlpha(60),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: const Icon(Icons.alarm_on_rounded, color: Colors.white, size: 24),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Builder(
-                                  builder: (_) {
-                                    final expiringProd = provider.products.where((p) => p.daysRemaining <= 7).firstOrNull ?? provider.products.first;
-                                    return Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          isHindi
-                                              ? '${expiringProd.name} की वारंटी ${expiringProd.daysRemaining} दिनों में समाप्त!'
-                                              : '${expiringProd.name} Warranty Ends in ${expiringProd.daysRemaining} Days!',
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 14,
-                                          ),
-                                        ),
-                                        Text(
-                                          isHindi
-                                              ? 'मुफ़्त वार्षिक सर्विस क्लेम करें या AMC रीन्यू कराएं।'
-                                              : 'Claim free annual service or renew AMC today.',
-                                          style: const TextStyle(
-                                            color: Colors.white70,
-                                            fontSize: 11,
-                                          ),
-                                        ),
-                                      ],
-                                    );
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              ElevatedButton.icon(
-                                onPressed: () {
-                                  final acProduct = provider.products.where((p) => p.daysRemaining <= 7).firstOrNull ?? provider.products.first;
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => ProductDetailScreen(product: acProduct),
-                                    ),
-                                  );
-                                },
-                                icon: const Icon(Icons.arrow_forward_rounded, size: 14),
-                                label: Text(
-                                  isHindi ? 'अभी देखें (Act Now)' : 'View & Renew',
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-                                ),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.white,
-                                  foregroundColor: const Color(0xFFE11D48),
-                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-
-                  // 4. Quick Action Tools (Glassy Floating Pods)
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        isHindi ? 'त्वरित कार्य (Quick Actions)' : 'Quick Actions Hub',
-                        style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16),
-                      ),
-                      Text(
-                        isHindi ? '1-टैप शॉर्टकट' : '1-Tap Shortcuts',
-                        style: TextStyle(fontSize: 11, color: isDark ? AppTheme.textMutedDark : AppTheme.textMutedLight),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    height: 104,
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
-                      clipBehavior: Clip.none,
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      children: [
-                        _buildEasyActionButton(
-                          context: context,
-                          label: isHindi ? 'बिल स्कैन' : 'Scan Bill',
-                          sub: isHindi ? 'AI कैमरा' : 'AI Camera',
-                          icon: Icons.qr_code_scanner,
-                          gradient: const [Color(0xFF4F46E5), Color(0xFF7C3AED)],
-                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ScannerScreen())),
-                        ),
-                        const SizedBox(width: 10),
-                        _buildEasyActionButton(
-                          context: context,
-                          label: isHindi ? 'नया प्रोडक्ट' : 'Add Item',
-                          sub: isHindi ? 'मैन्युअल' : 'Manual Form',
-                          icon: Icons.add_box_rounded,
-                          gradient: const [Color(0xFF0EA5E9), Color(0xFF2563EB)],
-                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddProductScreen())),
-                        ),
-                        const SizedBox(width: 10),
-                        _buildEasyActionButton(
-                          context: context,
-                          label: isHindi ? 'खर्चा जोड़ें' : 'Log Expense',
-                          sub: isHindi ? 'सर्विस/मरम्मत' : 'Service/Repair',
-                          icon: Icons.receipt_long,
-                          gradient: const [Color(0xFF10B981), Color(0xFF059669)],
-                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ExpensesScreen())),
-                        ),
-                        const SizedBox(width: 10),
-                        _buildEasyActionButton(
-                          context: context,
-                          label: isHindi ? 'दस्तावेज़ वॉल्ट' : 'Bills Vault',
-                          sub: isHindi ? 'PDF रसीदें' : 'PDF Invoices',
-                          icon: Icons.folder_shared_rounded,
-                          gradient: const [Color(0xFFF59E0B), Color(0xFFD97706)],
-                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const InvoiceVaultScreen())),
-                        ),
-                        const SizedBox(width: 10),
-                        _buildEasyActionButton(
-                          context: context,
-                          label: isHindi ? 'वारंटी क्लेम' : 'File Claim',
-                          sub: isHindi ? 'कंपनी सर्विस' : 'OEM Claim',
-                          icon: Icons.shield_rounded,
-                          gradient: const [Color(0xFFEC4899), Color(0xFFBE185D)],
-                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ClaimsScreen())),
-                        ),
-                        const SizedBox(width: 10),
-                        _buildEasyActionButton(
-                          context: context,
-                          label: isHindi ? 'AMC व बीमा' : 'AMC & Care',
-                          sub: isHindi ? 'हेल्पलाइन' : 'Helplines',
-                          icon: Icons.support_agent_rounded,
-                          gradient: const [Color(0xFF8B5CF6), Color(0xFF6D28D9)],
-                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AMCScreen())),
-                        ),
-                        const SizedBox(width: 10),
-                        _buildEasyActionButton(
-                          context: context,
-                          label: isHindi ? 'TCO रिपोर्ट' : 'TCO Report',
-                          sub: isHindi ? 'फाइनेंशियल' : 'Financials',
-                          icon: Icons.insights_rounded,
-                          gradient: const [Color(0xFF6366F1), Color(0xFF4338CA)],
-                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AnalyticsReportsScreen())),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // 5. Products Section with Status Filter Chips
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        isHindi ? 'सुरक्षित प्रोडक्ट्स' : 'Protected Products',
-                        style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16),
-                      ),
-                      Text(
-                        '${filteredProducts.length} ${isHindi ? 'आइटम्स' : 'items'}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: isDark ? AppTheme.textMutedDark : AppTheme.textMutedLight,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-
-                  // Filter Chips
-                  Row(
-                    children: [
-                      _buildFilterChip('All', isHindi ? 'सभी (${provider.products.length})' : 'All (${provider.products.length})', isDark),
-                      const SizedBox(width: 6),
-                      _buildFilterChip('Active', isHindi ? 'सक्रिय (${provider.activeCount})' : 'Active (${provider.activeCount})', isDark),
-                      const SizedBox(width: 6),
-                      _buildFilterChip('Expiring Soon', isHindi ? 'समाप्त होने वाली (${provider.expiringSoonCount})' : 'Expiring (${provider.expiringSoonCount})', isDark),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Products List / Empty State
-                  if (filteredProducts.isEmpty)
-                    GlassCard(
-                      borderRadius: 20,
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
-                      child: Column(
-                        children: [
-                          Icon(
-                            provider.products.isEmpty ? Icons.inventory_2_outlined : Icons.search_off_rounded,
-                            size: 46,
-                            color: AppTheme.primary.withAlpha(180),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            provider.products.isEmpty
-                                ? (isHindi ? 'आपका वॉल्ट खाली है' : 'Your Vault is Empty')
-                                : (isHindi ? 'कोई प्रोडक्ट नहीं मिला' : 'No matching products found'),
-                            style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            provider.products.isEmpty
-                                ? (isHindi
-                                    ? 'Firebase पर अपने प्रोडक्ट्स, वारंटी और बिल सुरक्षित रखने के लिए पहला प्रोडक्ट जोड़ें।'
-                                    : 'Add your first product, warranty and bill to save it in Firebase Cloud.')
-                                : (isHindi ? 'कृपया सर्च टर्म बदलें या फ़िल्टर हटाएं।' : 'Try changing your search query or status filter.'),
-                            textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 12, color: isDark ? AppTheme.textMutedDark : AppTheme.textMutedLight),
-                          ),
-                          if (provider.products.isEmpty) ...[
-                            const SizedBox(height: 18),
-                            ElevatedButton.icon(
-                              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddProductScreen())),
-                              icon: const Icon(Icons.add_rounded, size: 18),
-                              label: Text(
-                                isHindi ? '+ नया प्रोडक्ट जोड़ें' : '+ Add First Product',
-                                style: const TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppTheme.primary,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    )
-                  else
-                    ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: filteredProducts.length,
-                      itemBuilder: (context, index) {
-                        final product = filteredProducts[index];
-                        return _buildGlassProductCard(context, product, lang, isDark, isHindi);
-                      },
-                    ),
-
-                  const SizedBox(height: 100),
-                ],
+          // Simple Active / Expired indicators
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: Colors.white.withAlpha(25),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '🟢 $activeCount ${isHindi ? 'वारंटी सक्रिय' : 'Active'}',
+                  style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                ),
               ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFilterChip(String status, String label, bool isDark) {
-    final isSelected = _selectedStatusFilter == status;
-    Color chipColor = AppTheme.primary;
-    if (status == 'Active') chipColor = AppTheme.success;
-    if (status == 'Expiring Soon') chipColor = AppTheme.warning;
-
-    return GestureDetector(
-      onTap: () => setState(() => _selectedStatusFilter = status),
-      child: GlassCard(
-        borderRadius: 14,
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        opacity: isSelected ? 0.9 : 0.6,
-        tintColor: isSelected ? chipColor : null,
-        border: Border.all(
-          color: isSelected ? chipColor : Colors.white.withAlpha(isDark ? 20 : 180),
-          width: 1.2,
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-            color: isSelected ? Colors.white : (isDark ? AppTheme.textMutedDark : AppTheme.textMutedLight),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildGlassStatCard({
-    required String title,
-    required String value,
-    required String sub,
-    required Color color,
-    required IconData icon,
-    required bool isSelected,
-    required VoidCallback onTap,
-    required bool isDark,
-  }) {
-    return Expanded(
-      child: GlassCard(
-        borderRadius: 20,
-        padding: const EdgeInsets.all(14),
-        opacity: isSelected ? 0.88 : 0.75,
-        tintColor: color,
-        border: Border.all(
-          color: isSelected ? color : Colors.white.withAlpha(isDark ? 30 : 200),
-          width: isSelected ? 1.8 : 1.0,
-        ),
-        onTap: onTap,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Icon(icon, color: color, size: 22),
+              const SizedBox(width: 8),
+              if (expiredCount > 0)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: color.withAlpha(40),
+                    color: Colors.white.withAlpha(25),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    'LIVE',
-                    style: TextStyle(
-                      color: color,
-                      fontSize: 8.5,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 0.5,
-                    ),
+                    '🔴 $expiredCount ${isHindi ? 'समाप्त' : 'Expired'}',
+                    style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
                   ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Big Friendly "+ Add New Item" button
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                HapticFeedback.lightImpact();
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AddProductScreen()),
+                );
+              },
+              icon: const Icon(Icons.add_circle_outline_rounded, size: 20),
+              label: Text(
+                isHindi ? '+ नया प्रोडक्ट या बिल जोड़ें' : '+ Add New Item / Bill',
+                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: const Color(0xFF3B82F6),
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(vertical: 13),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // -------------------------------------------------------------
+  // 2. GENTLE EXPIRY ALERT BANNER
+  // -------------------------------------------------------------
+  Widget _buildGentleExpiryBanner(BuildContext context, ProductItem product, bool isDark, bool isHindi) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF59E0B).withAlpha(isDark ? 30 : 18),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFF59E0B).withAlpha(80), width: 1),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF59E0B).withAlpha(40),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.warning_amber_rounded, color: Color(0xFFD97706), size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  isHindi ? 'वारंटी जल्द समाप्त होगी' : 'Warranty Expiring Soon',
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFFD97706),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${product.name} (${product.daysRemaining} ${isHindi ? 'दिन बाकी' : 'days left'})',
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: isDark ? Colors.white70 : const Color(0xFF475569),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: GoogleFonts.outfit(
-                fontSize: 21,
-                fontWeight: FontWeight.w900,
-                color: color,
-              ),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => ProductDetailScreen(product: product)),
+              );
+            },
+            child: Text(
+              isHindi ? 'देखें' : 'View',
+              style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFD97706), fontSize: 12.5),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // -------------------------------------------------------------
+  // 3. 4 BIG & EASY ACTION BUTTONS
+  // -------------------------------------------------------------
+  Widget _buildEasyActionHub(BuildContext context, bool isDark, bool isHindi) {
+    return Row(
+      children: [
+        Expanded(
+          child: _buildBigActionButton(
+            context,
+            icon: Icons.qr_code_scanner_rounded,
+            color: const Color(0xFF3B82F6),
+            title: isHindi ? 'बिल स्कैन' : 'Scan Bill',
+            onTap: () {
+              HapticFeedback.lightImpact();
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const ScannerScreen()));
+            },
+            isDark: isDark,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _buildBigActionButton(
+            context,
+            icon: Icons.receipt_long_rounded,
+            color: const Color(0xFF10B981),
+            title: isHindi ? 'बिल वॉल्ट' : 'My Bills',
+            onTap: () {
+              HapticFeedback.lightImpact();
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const InvoiceVaultScreen()));
+            },
+            isDark: isDark,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _buildBigActionButton(
+            context,
+            icon: Icons.shield_outlined,
+            color: const Color(0xFFEC4899),
+            title: isHindi ? 'क्लेम' : 'Claims',
+            onTap: () {
+              HapticFeedback.lightImpact();
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const ClaimsScreen()));
+            },
+            isDark: isDark,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _buildBigActionButton(
+            context,
+            icon: Icons.headset_mic_rounded,
+            color: const Color(0xFF8B5CF6),
+            title: isHindi ? 'सपोर्ट' : 'Support',
+            onTap: () {
+              HapticFeedback.lightImpact();
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const AMCScreen()));
+            },
+            isDark: isDark,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBigActionButton(
+    BuildContext context, {
+    required IconData icon,
+    required Color color,
+    required String title,
+    required VoidCallback onTap,
+    required bool isDark,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E293B) : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(isDark ? 20 : 6),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(9),
+              decoration: BoxDecoration(
+                color: color.withAlpha(25),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: color, size: 20),
+            ),
+            const SizedBox(height: 6),
             Text(
               title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontWeight: FontWeight.bold,
                 fontSize: 11.5,
-                color: isDark ? Colors.white : AppTheme.textMainLight,
-              ),
-            ),
-            Text(
-              sub,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 10,
-                color: isDark ? AppTheme.textMutedDark : AppTheme.textMutedLight,
+                fontWeight: FontWeight.w700,
+                color: isDark ? Colors.white : const Color(0xFF1E293B),
+                fontFamilyFallback: AppTheme.fontFallbacks,
               ),
             ),
           ],
@@ -664,281 +634,242 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
     );
   }
 
-  Widget _buildEasyActionButton({
-    required BuildContext context,
-    required String label,
-    required String sub,
-    required IconData icon,
-    required List<Color> gradient,
-    required VoidCallback onTap,
-  }) {
+  // -------------------------------------------------------------
+  // 4. FILTER CHIP
+  // -------------------------------------------------------------
+  Widget _buildFilterChip(String key, String label, int count, bool isDark) {
+    final isSelected = _selectedFilter == key;
     return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        children: [
-          Container(
-            width: 54,
-            height: 54,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: gradient,
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(18),
-              boxShadow: [
-                BoxShadow(
-                  color: gradient.first.withAlpha(90),
-                  blurRadius: 10,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-              border: Border.all(
-                color: Colors.white.withAlpha(180),
-                width: 1.2,
-              ),
-            ),
-            child: Icon(icon, color: Colors.white, size: 24),
+      onTap: () {
+        HapticFeedback.selectionClick();
+        setState(() => _selectedFilter = key);
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppTheme.primary
+              : (isDark ? const Color(0xFF1E293B) : Colors.white),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? AppTheme.primary : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
           ),
-          const SizedBox(height: 5),
-          SizedBox(
-            width: 68,
-            child: Text(
-              label,
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-            ),
+        ),
+        child: Text(
+          '$label ($count)',
+          style: TextStyle(
+            fontSize: 11.5,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+            color: isSelected ? Colors.white : (isDark ? Colors.white70 : const Color(0xFF475569)),
+            fontFamilyFallback: AppTheme.fontFallbacks,
           ),
-          SizedBox(
-            width: 68,
-            child: Text(
-              sub,
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 9, color: Colors.grey),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildGlassProductCard(
+  // -------------------------------------------------------------
+  // 5. SIMPLE & CLEAN PRODUCT CARD
+  // -------------------------------------------------------------
+  Widget _buildSimpleProductCard(
     BuildContext context,
     ProductItem product,
-    String lang,
     bool isDark,
     bool isHindi,
   ) {
     Color statusColor;
     String statusText;
+
     if (product.warrantyStatus == 'Active') {
-      statusColor = AppTheme.success;
-      statusText = isHindi ? 'सक्रिय (Active)' : 'Active';
+      statusColor = const Color(0xFF10B981);
+      statusText = product.daysRemaining > 0
+          ? (isHindi ? 'वारंटी: ${product.daysRemaining} दिन शेष' : 'Active • ${product.daysRemaining} days left')
+          : (isHindi ? 'वारंटी सक्रिय' : 'Active Warranty');
     } else if (product.warrantyStatus == 'Expiring Soon') {
-      statusColor = AppTheme.warning;
-      statusText = isHindi ? '7 दिन शेष' : 'Expiring Soon';
+      statusColor = const Color(0xFFF59E0B);
+      statusText = isHindi ? 'जल्द समाप्त (${product.daysRemaining} दिन)' : 'Expiring Soon (${product.daysRemaining}d)';
     } else {
-      statusColor = AppTheme.danger;
-      statusText = isHindi ? 'समाप्त (Expired)' : 'Expired';
+      statusColor = const Color(0xFFE11D48);
+      statusText = isHindi ? 'वारंटी समाप्त' : 'Warranty Expired';
     }
 
-    return GlassCard(
-      margin: const EdgeInsets.only(bottom: 12),
-      borderRadius: 22,
-      padding: const EdgeInsets.all(12),
-      opacity: 0.82,
-      blur: 24,
+    return GestureDetector(
       onTap: () {
+        HapticFeedback.lightImpact();
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (_) => ProductDetailScreen(product: product),
-          ),
+          MaterialPageRoute(builder: (_) => ProductDetailScreen(product: product)),
         );
       },
-      child: Column(
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              // Product Image
-              ClipRRect(
-                borderRadius: BorderRadius.circular(14),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E293B) : Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(isDark ? 25 : 6),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            // Product Image
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                width: 68,
+                height: 68,
+                color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
                 child: Image.network(
                   product.imageUrl,
-                  width: 68,
-                  height: 68,
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) => Container(
-                    width: 68,
-                    height: 68,
-                    color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-                    child: const Icon(Icons.devices_other_rounded, color: Colors.grey, size: 28),
+                    color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+                    child: const Icon(Icons.devices_other_rounded, color: AppTheme.primary, size: 28),
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
+            ),
+            const SizedBox(width: 12),
 
-              // Product Details
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            product.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: statusColor.withAlpha(30),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            statusText,
-                            style: TextStyle(
-                              color: statusColor,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      '${product.brand} • ${product.category}',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: isDark ? AppTheme.textMutedDark : AppTheme.textMutedLight,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          '₹${product.purchasePrice.toInt()}',
-                          style: GoogleFonts.outfit(
-                            fontWeight: FontWeight.w900,
-                            fontSize: 14,
-                            color: AppTheme.primary,
-                          ),
-                        ),
-                        Row(
-                          children: [
-                            Icon(Icons.schedule, size: 12, color: statusColor),
-                            const SizedBox(width: 3),
-                            Text(
-                              product.daysRemaining > 0
-                                  ? '${product.daysRemaining} ${isHindi ? 'दिन बचे हैं' : 'Days Left'}'
-                                  : (isHindi ? 'समाप्त' : 'Expired'),
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: statusColor,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Divider(
-            height: 1,
-            thickness: 0.8,
-            color: isDark ? Colors.white.withAlpha(20) : Colors.black.withAlpha(15),
-          ),
-          const SizedBox(height: 8),
-
-          // 1-Tap Quick Action Row
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
+            // Product Details
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.receipt_long, size: 13, color: Colors.grey),
-                  const SizedBox(width: 4),
                   Text(
-                    'TCO: ₹${product.totalCostOfOwnership.toInt()}',
-                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                    product.brand.toUpperCase(),
+                    style: const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5,
+                      color: AppTheme.primary,
+                    ),
                   ),
-                ],
-              ),
-              Row(
-                children: [
-                  // Direct 1-Tap Helpline / Care
-                  GestureDetector(
-                    onTap: () {
-                      final contact = product.sellerContact.isNotEmpty ? product.sellerContact : '1800-200-4000';
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('📞 Dialing ${product.brand} Support: $contact'),
-                          backgroundColor: AppTheme.primary,
+                  const SizedBox(height: 2),
+                  Text(
+                    product.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTheme.font(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 14,
+                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        '₹${product.purchasePrice.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')}',
+                        style: AppTheme.font(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 14.5,
+                          color: isDark ? Colors.white : const Color(0xFF0F172A),
                         ),
-                      );
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF0F172A).withAlpha(150) : const Color(0xFFF1F5F9),
-                        borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.call, size: 11, color: AppTheme.success),
-                          const SizedBox(width: 4),
-                          Text(
-                            isHindi ? 'हेल्पलाइन' : 'Call Care',
-                            style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                        decoration: BoxDecoration(
+                          color: statusColor.withAlpha(25),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          statusText,
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: statusColor,
+                            fontFamilyFallback: AppTheme.fontFallbacks,
                           ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-
-                  // Direct 1-Tap QR Passport
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primary.withAlpha(25),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.qr_code, size: 11, color: AppTheme.primary),
-                        const SizedBox(width: 4),
-                        Text(
-                          isHindi ? 'पासपोर्ट' : 'QR View',
-                          style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: AppTheme.primary),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ],
+            ),
+
+            const SizedBox(width: 4),
+            const Icon(Icons.chevron_right_rounded, size: 20, color: Colors.grey),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // -------------------------------------------------------------
+  // 6. EMPTY STATE
+  // -------------------------------------------------------------
+  Widget _buildEmptyPlaceholder(BuildContext context, bool isDark, bool isHindi, bool isTotalEmpty) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B).withAlpha(120) : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+        ),
+      ),
+      child: Column(
+        children: [
+          Icon(
+            isTotalEmpty ? Icons.inventory_2_outlined : Icons.search_off_rounded,
+            size: 44,
+            color: AppTheme.primary,
           ),
+          const SizedBox(height: 12),
+          Text(
+            isTotalEmpty
+                ? (isHindi ? 'कोई सामान सुरक्षित नहीं है' : 'No Items Added Yet')
+                : (isHindi ? 'कोई मिलता-जुलता सामान नहीं मिला' : 'No matching items found'),
+            style: AppTheme.font(fontWeight: FontWeight.bold, fontSize: 15),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            isTotalEmpty
+                ? (isHindi
+                    ? 'नीचे बटन दबाकर अपने बिल या वारंटी कार्ड सेव करें।'
+                    : 'Add your first product or bill to start warranty tracking.')
+                : (isHindi ? 'सर्च कीवर्ड बदलकर देखें' : 'Try searching with different keywords'),
+            style: TextStyle(
+              fontSize: 12,
+              color: isDark ? AppTheme.textMutedDark : AppTheme.textMutedLight,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          if (isTotalEmpty) ...[
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AddProductScreen()),
+                );
+              },
+              icon: const Icon(Icons.add_rounded, size: 18),
+              label: Text(
+                isHindi ? '+ नया प्रोडक्ट जोड़ें' : '+ Add First Item',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+              ),
+            ),
+          ],
         ],
       ),
     );

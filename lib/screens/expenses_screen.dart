@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../models/product_model.dart';
 import '../providers/warranty_provider.dart';
 import '../utils/app_theme.dart';
-import '../utils/translations.dart';
 import '../widgets/glass_container.dart';
 import 'add_product_screen.dart';
 
@@ -18,41 +17,94 @@ class ExpensesScreen extends StatefulWidget {
 }
 
 class _ExpensesScreenState extends State<ExpensesScreen> {
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
   String _selectedCategory = 'All';
 
-  final List<String> _categories = [
-    'All',
-    'Maintenance',
-    'Service',
-    'AMC',
-    'Repair',
-    'Accessories',
-    'Other',
+  final List<Map<String, dynamic>> _categories = [
+    {'name': 'All', 'hi': 'सभी खर्च', 'icon': Icons.all_inclusive_rounded},
+    {'name': 'Service', 'hi': 'सर्विसिंग', 'icon': Icons.cleaning_services_rounded},
+    {'name': 'Repair', 'hi': 'मरम्मत (Repair)', 'icon': Icons.handyman_rounded},
+    {'name': 'Maintenance', 'hi': 'मेंटेनेंस', 'icon': Icons.build_rounded},
+    {'name': 'AMC', 'hi': 'एएमसी (AMC)', 'icon': Icons.verified_rounded},
+    {'name': 'Other', 'hi': 'अन्य', 'icon': Icons.receipt_long_rounded},
   ];
 
-  void _showAddExpenseModal(BuildContext context, WarrantyProvider provider, String lang, bool isDark) {
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _confirmDeleteExpense(BuildContext context, WarrantyProvider provider, ExpenseRecord expense, bool isHindi) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          isHindi ? 'खर्च हटाएं?' : 'Delete Expense?',
+          style: AppTheme.font(fontWeight: FontWeight.bold, fontSize: 17),
+        ),
+        content: Text(
+          isHindi
+              ? 'क्या आप वास्तव में ₹${expense.amount.toInt()} का "${expense.productName}" खर्च रिकॉर्ड हटाना चाहते हैं?'
+              : 'Are you sure you want to delete this ₹${expense.amount.toInt()} record for "${expense.productName}"?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(isHindi ? 'रद्द करें' : 'Cancel', style: const TextStyle(fontWeight: FontWeight.bold)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.danger,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () {
+              provider.deleteExpense(expense.id);
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(isHindi ? 'खर्च हटा दिया गया' : 'Expense deleted'),
+                  backgroundColor: AppTheme.danger,
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            },
+            child: Text(isHindi ? 'हटाएं' : 'Delete', style: const TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAddExpenseModal(BuildContext context, WarrantyProvider provider, bool isHindi, bool isDark) {
     if (provider.products.isEmpty) {
       showModalBottomSheet(
         context: context,
         backgroundColor: Colors.transparent,
         builder: (ctx) => SafeArea(
-          child: GlassCard(
-            borderRadius: 28,
+          child: Container(
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF0F172A) : Colors.white,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            ),
             padding: const EdgeInsets.all(24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 const Icon(Icons.inventory_2_outlined, size: 48, color: AppTheme.primary),
-                const SizedBox(height: 14),
+                const SizedBox(height: 12),
                 Text(
-                  lang == 'hi' ? 'पहले एक प्रोडक्ट जोड़ें' : 'Add a Product First',
-                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18),
+                  isHindi ? 'पहले एक सामान जोड़ें' : 'Add an Item First',
+                  style: AppTheme.font(fontWeight: FontWeight.bold, fontSize: 18),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  lang == 'hi'
-                      ? 'खर्चा किसी प्रोडक्ट (जैसे AC, टीवी, फ्रिज) से जुड़ा होता है। कृपया पहले एक प्रोडक्ट जोड़ें।'
-                      : 'Expenses are linked to products (AC, TV, Vehicle, etc.). Please add a product first.',
+                  isHindi
+                      ? 'खर्च किसी सामान (जैसे AC, टीवी, फ्रिज) से जुड़ा होता है। कृपया पहले अपना सामान जोड़ें।'
+                      : 'Expenses are linked to your items. Please add an item first.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 12.5,
@@ -60,19 +112,18 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                ElevatedButton.icon(
+                ElevatedButton(
                   onPressed: () {
                     Navigator.pop(ctx);
                     Navigator.push(context, MaterialPageRoute(builder: (_) => const AddProductScreen()));
                   },
-                  icon: const Icon(Icons.add_rounded),
-                  label: Text(lang == 'hi' ? '+ नया प्रोडक्ट जोड़ें' : '+ Add New Product', style: const TextStyle(fontWeight: FontWeight.bold)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primary,
                     foregroundColor: Colors.white,
                     minimumSize: const Size(double.infinity, 48),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
+                  child: Text(isHindi ? '+ नया सामान जोड़ें' : '+ Add Item', style: const TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ],
             ),
@@ -82,13 +133,10 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
       return;
     }
 
-    final validProductIds = provider.products.map((p) => p.id).toSet();
-    String selectedProdId = (widget.filterProductId != null && validProductIds.contains(widget.filterProductId))
-        ? widget.filterProductId!
-        : provider.products.first.id;
-    String selectedCat = 'Maintenance';
+    String selectedProdId = provider.products.first.id;
+    String selectedCat = 'Service';
     final amountController = TextEditingController();
-    final providerController = TextEditingController(text: 'Authorized Service Center');
+    final providerController = TextEditingController(text: 'Service Center');
     final notesController = TextEditingController();
     final now = DateTime.now();
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -100,30 +148,49 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
       backgroundColor: Colors.transparent,
       builder: (ctx) => StatefulBuilder(
         builder: (modalCtx, setModalState) => SafeArea(
-          child: GlassCard(
-            borderRadius: 28,
-            opacity: 0.92,
-            blur: 28,
+          child: Container(
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF0F172A) : Colors.white,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            ),
             margin: EdgeInsets.only(
               bottom: MediaQuery.of(modalCtx).viewInsets.bottom,
             ),
-            padding: const EdgeInsets.all(22),
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(lang == 'hi' ? 'नया खर्चा जोड़ें' : 'Log New Expense', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18)),
-                      IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(modalCtx)),
+                      Text(
+                        isHindi ? 'नया खर्च जोड़ें' : 'Log New Expense',
+                        style: AppTheme.font(fontWeight: FontWeight.bold, fontSize: 17),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded, size: 20),
+                        onPressed: () => Navigator.pop(modalCtx),
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 14),
 
-                  // Product Picker Dropdown
-                  Text(lang == 'hi' ? 'प्रोडक्ट चुनें' : 'Select Product', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  // Pick Product
+                  Text(isHindi ? 'सामान चुनें' : 'Select Item', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 6),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -136,7 +203,10 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                         value: selectedProdId,
                         isExpanded: true,
                         items: provider.products
-                            .map((p) => DropdownMenuItem(value: p.id, child: Text(p.name, style: const TextStyle(fontSize: 13), overflow: TextOverflow.ellipsis)))
+                            .map((p) => DropdownMenuItem(
+                                  value: p.id,
+                                  child: Text('${p.name} (${p.brand})', style: const TextStyle(fontSize: 13), overflow: TextOverflow.ellipsis),
+                                ))
                             .toList(),
                         onChanged: (val) {
                           if (val != null) setModalState(() => selectedProdId = val);
@@ -144,40 +214,64 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
 
-                  // Amount & Date Row
+                  // Amount
+                  Text(isHindi ? 'खर्च राशि (₹) *' : 'Amount (₹) *', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: amountController,
+                    keyboardType: TextInputType.number,
+                    style: AppTheme.font(fontWeight: FontWeight.bold, fontSize: 16),
+                    decoration: InputDecoration(
+                      prefixText: '₹ ',
+                      hintText: '1500',
+                      hintStyle: TextStyle(color: isDark ? AppTheme.textHintDark : AppTheme.textHintLight),
+                      filled: true,
+                      fillColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Quick add chips
+                  Row(
+                    children: [500, 1000, 2000, 5000].map((amt) {
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: GestureDetector(
+                          onTap: () {
+                            HapticFeedback.selectionClick();
+                            final cur = double.tryParse(amountController.text) ?? 0;
+                            amountController.text = (cur + amt).toInt().toString();
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1)),
+                            ),
+                            child: Text('+₹$amt', style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: AppTheme.primary)),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Category & Provider
                   Row(
                     children: [
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(lang == 'hi' ? 'राशि (₹) *' : 'Amount (₹) *', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                            const SizedBox(height: 6),
-                            TextField(
-                              controller: amountController,
-                              keyboardType: TextInputType.number,
-                              decoration: InputDecoration(
-                                hintText: 'e.g. 1500',
-                                filled: true,
-                                fillColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(lang == 'hi' ? 'खर्च का प्रकार' : 'Expense Type', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                            Text(isHindi ? 'खर्च का प्रकार' : 'Expense Type', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                             const SizedBox(height: 6),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              padding: const EdgeInsets.symmetric(horizontal: 10),
                               decoration: BoxDecoration(
                                 color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
                                 borderRadius: BorderRadius.circular(12),
@@ -186,7 +280,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                                 child: DropdownButton<String>(
                                   value: selectedCat,
                                   isExpanded: true,
-                                  items: ['Maintenance', 'Service', 'AMC', 'Repair', 'Accessories', 'Other']
+                                  items: ['Service', 'Repair', 'Maintenance', 'AMC', 'Other']
                                       .map((c) => DropdownMenuItem(value: c, child: Text(c, style: const TextStyle(fontSize: 13))))
                                       .toList(),
                                   onChanged: (val) {
@@ -198,32 +292,39 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                           ],
                         ),
                       ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(isHindi ? 'दुकान / सर्विस सेंटर' : 'Center / Store', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 6),
+                            TextField(
+                              controller: providerController,
+                              decoration: InputDecoration(
+                                hintText: 'Urban Company',
+                                hintStyle: TextStyle(fontSize: 12, color: isDark ? AppTheme.textHintDark : AppTheme.textHintLight),
+                                filled: true,
+                                fillColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-
-                  // Service Provider
-                  Text(lang == 'hi' ? 'सर्विस सेंटर / मैकेनिक' : 'Service Provider / Store', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 6),
-                  TextField(
-                    controller: providerController,
-                    decoration: InputDecoration(
-                      hintText: 'e.g. Urban Company, Local Technician',
-                      filled: true,
-                      fillColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
 
                   // Notes
-                  Text(lang == 'hi' ? 'विवरण (Notes)' : 'Notes / Description', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  Text(isHindi ? 'विवरण (Notes)' : 'Notes / Remarks', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 6),
                   TextField(
                     controller: notesController,
                     decoration: InputDecoration(
-                      hintText: 'e.g. Routine servicing & filter replacement',
+                      hintText: isHindi ? 'उदा. फ़िल्टर बदला, गैस भरी' : 'e.g. Filter change, servicing',
+                      hintStyle: TextStyle(fontSize: 12.5, color: isDark ? AppTheme.textHintDark : AppTheme.textHintLight),
                       filled: true,
                       fillColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
@@ -232,13 +333,12 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                   ),
                   const SizedBox(height: 20),
 
-                  // Save Action Button
                   ElevatedButton(
                     onPressed: () {
                       final amt = double.tryParse(amountController.text.trim()) ?? 0.0;
                       if (amt <= 0) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(lang == 'hi' ? 'कृपया सही राशि दर्ज करें' : 'Please enter a valid amount')),
+                          SnackBar(content: Text(isHindi ? 'कृपया सही राशि दर्ज करें' : 'Please enter valid amount')),
                         );
                         return;
                       }
@@ -248,6 +348,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                         orElse: () => provider.products.first,
                       );
 
+                      HapticFeedback.mediumImpact();
                       provider.addExpense(ExpenseRecord(
                         id: 'exp-${DateTime.now().millisecondsSinceEpoch}',
                         productId: selectedProdId,
@@ -255,22 +356,28 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                         category: selectedCat,
                         amount: amt,
                         date: dateStr,
-                        serviceProvider: providerController.text.trim().isNotEmpty ? providerController.text.trim() : 'Service Center',
+                        serviceProvider: providerController.text.trim().isNotEmpty
+                            ? providerController.text.trim()
+                            : 'Service Center',
                         notes: notesController.text.trim(),
                       ));
 
                       Navigator.pop(modalCtx);
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(lang == 'hi' ? '✅ खर्चा सफलतापूर्वक दर्ज हुआ!' : '✅ Expense logged successfully!'), backgroundColor: AppTheme.success),
+                        SnackBar(
+                          content: Text(isHindi ? 'खर्च सेव हो गया!' : 'Expense saved successfully!'),
+                          backgroundColor: AppTheme.success,
+                          behavior: SnackBarBehavior.floating,
+                        ),
                       );
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.primary,
                       foregroundColor: Colors.white,
                       minimumSize: const Size(double.infinity, 48),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
-                    child: Text(lang == 'hi' ? 'खर्चा सेव करें' : 'Save Expense Log', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    child: Text(isHindi ? 'खर्च सेव करें' : 'Save Expense', style: const TextStyle(fontWeight: FontWeight.bold)),
                   ),
                 ],
               ),
@@ -286,14 +393,20 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
     final provider = Provider.of<WarrantyProvider>(context);
     final lang = provider.language;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isHindi = lang == 'hi';
 
-    var filteredExpenses = provider.expenses;
-    if (widget.filterProductId != null) {
-      filteredExpenses = filteredExpenses.where((e) => e.productId == widget.filterProductId).toList();
-    }
-    if (_selectedCategory != 'All') {
-      filteredExpenses = filteredExpenses.where((e) => e.category == _selectedCategory).toList();
-    }
+    final allExpenses = provider.expenses;
+    final totalSpent = allExpenses.fold<double>(0.0, (sum, e) => sum + e.amount);
+
+    final filtered = allExpenses.where((e) {
+      final matchesQuery = _searchQuery.isEmpty ||
+          e.productName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          e.serviceProvider.toLowerCase().contains(_searchQuery.toLowerCase());
+
+      final matchesCategory = _selectedCategory == 'All' || e.category.toLowerCase() == _selectedCategory.toLowerCase();
+
+      return matchesQuery && matchesCategory;
+    }).toList();
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -301,54 +414,98 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
-        title: Text(
-          AppTranslations.tr('expenses', lang),
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              isHindi ? 'खर्चों का हिसाब' : 'Service Expenses',
+              style: AppTheme.font(fontWeight: FontWeight.w800, fontSize: 18),
+            ),
+            Text(
+              '${allExpenses.length} ${isHindi ? 'खर्च रिकॉर्ड' : 'records logged'}',
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w500,
+                color: isDark ? AppTheme.textMutedDark : AppTheme.textMutedLight,
+              ),
+            ),
+          ],
         ),
+        actions: [
+          IconButton(
+            icon: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: const BoxDecoration(
+                color: AppTheme.primary,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.add_rounded, size: 18, color: Colors.white),
+            ),
+            tooltip: isHindi ? 'खर्च जोड़ें' : 'Add Expense',
+            onPressed: () => _showAddExpenseModal(context, provider, isHindi, isDark),
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: GlassScaffoldBackground(
         child: SafeArea(
           child: Column(
             children: [
-              // KPI Glass Summary Card
+              // 1. SIMPLE EXPENSE SUMMARY CARD
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: GlassCard(
-                  borderRadius: 22,
-                  padding: const EdgeInsets.all(16),
-                  tintColor: const Color(0xFF6366F1),
-                  opacity: 0.88,
-                  blur: 24,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Total Ownership Expense',
-                            style: TextStyle(color: Colors.white70, fontSize: 12),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '₹${provider.totalExpenseValue.toInt()}',
-                            style: GoogleFonts.outfit(
-                              color: Colors.white,
-                              fontSize: 26,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                        ],
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF6366F1).withAlpha(70),
+                        blurRadius: 14,
+                        offset: const Offset(0, 4),
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withAlpha(50),
-                          borderRadius: BorderRadius.circular(12),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        isHindi ? 'कुल सर्विस व रिपेयरिंग खर्च' : 'Total Service & Repair Expense',
+                        style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        '₹${totalSpent.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')}',
+                        style: AppTheme.font(
+                          color: Colors.white,
+                          fontSize: 26,
+                          fontWeight: FontWeight.w900,
                         ),
-                        child: Text(
-                          '${provider.expenses.length} Total Logs',
-                          style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 14),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: () => _showAddExpenseModal(context, provider, isHindi, isDark),
+                          icon: const Icon(Icons.add_circle_outline_rounded, size: 18),
+                          label: Text(
+                            isHindi ? '+ नया खर्च दर्ज करें' : '+ Log New Expense',
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: const Color(0xFF6366F1),
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
                         ),
                       ),
                     ],
@@ -356,35 +513,89 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                 ),
               ),
 
-              // Category Glass Chips
+              // 2. SEARCH BAR
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                    ),
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: (val) => setState(() => _searchQuery = val),
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                      fontFamilyFallback: AppTheme.fontFallbacks,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: isHindi ? 'सामान या सर्विस सेंटर का नाम खोजें...' : 'Search item or service center...',
+                      hintStyle: TextStyle(
+                        fontSize: 12.5,
+                        color: isDark ? AppTheme.textHintDark : AppTheme.textHintLight,
+                        fontFamilyFallback: AppTheme.fontFallbacks,
+                      ),
+                      prefixIcon: const Icon(Icons.search_rounded, size: 20, color: AppTheme.primary),
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.close_rounded, size: 18),
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() => _searchQuery = '');
+                              },
+                            )
+                          : null,
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 6),
+
+              // 3. CATEGORY HORIZONTAL CHIPS
               SizedBox(
-                height: 42,
+                height: 36,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 14),
                   itemCount: _categories.length,
                   itemBuilder: (context, idx) {
                     final cat = _categories[idx];
-                    final isSel = _selectedCategory == cat;
+                    final catName = cat['name'] as String;
+                    final isSel = _selectedCategory == catName;
+                    final label = isHindi ? cat['hi'] as String : catName;
+
                     return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 3),
+                      padding: const EdgeInsets.symmetric(horizontal: 3),
                       child: GestureDetector(
-                        onTap: () => setState(() => _selectedCategory = cat),
-                        child: GlassCard(
-                          borderRadius: 14,
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          setState(() => _selectedCategory = catName);
+                        },
+                        child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          opacity: isSel ? 0.9 : 0.6,
-                          tintColor: isSel ? AppTheme.primary : null,
-                          border: Border.all(
-                            color: isSel ? AppTheme.primary : Colors.white.withAlpha(isDark ? 20 : 180),
-                            width: 1.2,
+                          decoration: BoxDecoration(
+                            color: isSel
+                                ? const Color(0xFF6366F1)
+                                : (isDark ? const Color(0xFF1E293B) : Colors.white),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: isSel ? const Color(0xFF6366F1) : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                            ),
                           ),
                           child: Text(
-                            cat,
+                            label,
                             style: TextStyle(
                               fontSize: 11,
-                              fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
-                              color: isSel ? Colors.white : (isDark ? AppTheme.textMutedDark : AppTheme.textMutedLight),
+                              fontWeight: isSel ? FontWeight.bold : FontWeight.w600,
+                              color: isSel ? Colors.white : (isDark ? Colors.white70 : const Color(0xFF334155)),
+                              fontFamilyFallback: AppTheme.fontFallbacks,
                             ),
                           ),
                         ),
@@ -395,39 +606,43 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
               ),
               const SizedBox(height: 8),
 
-              // Expenses List
+              // 4. EXPENSE TRANSACTION LIST
               Expanded(
-                child: filteredExpenses.isEmpty
+                child: filtered.isEmpty
                     ? Center(
                         child: Text(
-                          lang == 'en' ? 'No expense logs found' : 'कोई खर्च रिकॉर्ड नहीं मिला',
+                          isHindi ? 'कोई खर्च रिकॉर्ड नहीं मिला' : 'No expense records found',
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: 13,
                             color: isDark ? AppTheme.textMutedDark : AppTheme.textMutedLight,
                           ),
                         ),
                       )
                     : ListView.builder(
-                        padding: const EdgeInsets.only(left: 16, right: 16, top: 6, bottom: 100),
-                        itemCount: filteredExpenses.length,
+                        padding: const EdgeInsets.only(left: 16, right: 16, top: 4, bottom: 90),
+                        itemCount: filtered.length,
                         itemBuilder: (context, idx) {
-                          final exp = filteredExpenses[idx];
-                          return GlassCard(
+                          final exp = filtered[idx];
+                          return Container(
                             margin: const EdgeInsets.only(bottom: 10),
-                            borderRadius: 20,
-                            padding: const EdgeInsets.all(14),
-                            opacity: 0.82,
-                            blur: 20,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                              ),
+                            ),
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Container(
-                                  padding: const EdgeInsets.all(10),
+                                  padding: const EdgeInsets.all(9),
                                   decoration: BoxDecoration(
-                                    color: AppTheme.primary.withAlpha(25),
+                                    color: const Color(0xFF6366F1).withAlpha(20),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
-                                  child: const Icon(Icons.receipt_long, color: AppTheme.primary, size: 22),
+                                  child: const Icon(Icons.receipt_long_rounded, color: Color(0xFF6366F1), size: 20),
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(
@@ -440,17 +655,17 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                                           Expanded(
                                             child: Text(
                                               exp.productName,
-                                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
+                                              style: AppTheme.font(fontWeight: FontWeight.bold, fontSize: 14),
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
                                             ),
                                           ),
                                           Text(
-                                            '₹${exp.amount.toInt()}',
-                                            style: GoogleFonts.outfit(
+                                            '-₹${exp.amount.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')}',
+                                            style: AppTheme.font(
                                               fontWeight: FontWeight.w900,
                                               fontSize: 15,
-                                              color: AppTheme.danger,
+                                              color: const Color(0xFFE11D48),
                                             ),
                                           ),
                                         ],
@@ -464,7 +679,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                                         ),
                                       ),
                                       if (exp.notes != null && exp.notes!.isNotEmpty) ...[
-                                        const SizedBox(height: 4),
+                                        const SizedBox(height: 3),
                                         Text(
                                           exp.notes!,
                                           style: TextStyle(
@@ -475,12 +690,21 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                                         ),
                                       ],
                                       const SizedBox(height: 4),
-                                      Text(
-                                        exp.date,
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          color: isDark ? AppTheme.textMutedDark : AppTheme.textMutedLight,
-                                        ),
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            exp.date,
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              color: isDark ? AppTheme.textMutedDark : AppTheme.textMutedLight,
+                                            ),
+                                          ),
+                                          GestureDetector(
+                                            onTap: () => _confirmDeleteExpense(context, provider, exp, isHindi),
+                                            child: const Icon(Icons.delete_outline_rounded, size: 16, color: Color(0xFFE11D48)),
+                                          ),
+                                        ],
                                       ),
                                     ],
                                   ),
@@ -493,17 +717,6 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
               ),
             ],
           ),
-        ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        heroTag: 'fab_expenses',
-        onPressed: () => _showAddExpenseModal(context, provider, lang, isDark),
-        backgroundColor: AppTheme.primary,
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.add),
-        label: Text(
-          AppTranslations.tr('addExpense', lang),
-          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
     );

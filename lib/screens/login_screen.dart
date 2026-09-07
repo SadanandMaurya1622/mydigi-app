@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../providers/warranty_provider.dart';
 import '../services/auth_service.dart';
@@ -145,7 +144,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                               const SizedBox(width: 8),
                               Text(
                                 'MyDigi',
-                                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13),
+                                style: AppTheme.font(fontWeight: FontWeight.bold, fontSize: 13),
                               ),
                             ],
                           ),
@@ -209,7 +208,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                       child: Center(
                         child: Text(
                           'M',
-                          style: GoogleFonts.outfit(
+                          style: AppTheme.font(
                             color: Colors.white,
                             fontWeight: FontWeight.w900,
                             fontSize: 48,
@@ -223,7 +222,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                     // App Title & Tagline
                     Text(
                       'MyDigi',
-                      style: GoogleFonts.outfit(
+                      style: AppTheme.font(
                         fontSize: 34,
                         fontWeight: FontWeight.w900,
                         letterSpacing: -0.5,
@@ -325,7 +324,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                   const SizedBox(width: 14),
                                   Text(
                                     isHindi ? 'Google से कनेक्ट हो रहे हैं...' : 'Signing in with Google...',
-                                    style: GoogleFonts.outfit(
+                                    style: AppTheme.font(
                                       fontSize: 15,
                                       fontWeight: FontWeight.bold,
                                       color: isDark ? Colors.white : AppTheme.textMainLight,
@@ -341,7 +340,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                   const SizedBox(width: 14),
                                   Text(
                                     'Continue with Google',
-                                    style: GoogleFonts.outfit(
+                                    style: AppTheme.font(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w800,
                                       letterSpacing: 0.2,
@@ -353,7 +352,48 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                       ),
                     ),
 
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 10),
+
+                    // Demo / Guest Login button
+                    TextButton(
+                      onPressed: () async {
+                        final nav = Navigator.of(context);
+                        final provider = Provider.of<WarrantyProvider>(context, listen: false);
+                        await provider.loginAsGuest();
+                        if (!mounted) return;
+                        nav.pushReplacement(
+                          PageRouteBuilder(
+                            transitionDuration: const Duration(milliseconds: 300),
+                            pageBuilder: (_, animation, _) => const MainNavigationHost(),
+                            transitionsBuilder: (_, animation, _, child) => FadeTransition(opacity: animation, child: child),
+                          ),
+                        );
+                      },
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.play_circle_outline_rounded,
+                            size: 16,
+                            color: isDark ? AppTheme.textMutedDark : AppTheme.textMutedLight,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            isHindi ? 'डेमो मोड में ऐप देखें (Explore Demo)' : 'Explore Demo / Guest Mode',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: isDark ? AppTheme.textMutedDark : AppTheme.textMutedLight,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 6),
 
                     // Subtext Helper
                     Text(

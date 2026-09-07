@@ -1,6 +1,5 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import '../utils/app_theme.dart';
 
 class GlassCard extends StatelessWidget {
   final Widget child;
@@ -13,6 +12,8 @@ class GlassCard extends StatelessWidget {
   final Border? border;
   final VoidCallback? onTap;
   final List<BoxShadow>? shadows;
+  final bool enableBlur;
+  final bool isSolidGradient;
 
   const GlassCard({
     super.key,
@@ -22,10 +23,12 @@ class GlassCard extends StatelessWidget {
     this.margin,
     this.tintColor,
     this.opacity = 0.75,
-    this.blur = 20,
+    this.blur = 0,
     this.border,
     this.onTap,
     this.shadows,
+    this.enableBlur = false,
+    this.isSolidGradient = false,
   });
 
   @override
@@ -36,51 +39,81 @@ class GlassCard extends StatelessWidget {
         ? const Color(0xFF1E293B)
         : Colors.white;
 
-    final effectiveColor = tintColor != null
-        ? tintColor!.withAlpha((tintColor!.a * 255.0 * opacity).round().clamp(0, 255))
-        : baseColor.withAlpha(isDark ? (255 * 0.70).toInt() : (255 * 0.82).toInt());
+    final baseSecondary = isDark
+        ? const Color(0xFF0F172A)
+        : const Color(0xFFF8FAFC);
 
     final effectiveBorder = border ??
         Border.all(
           color: isDark
-              ? Colors.white.withAlpha(25)
-              : Colors.white.withAlpha(220),
-          width: 1.2,
+              ? const Color(0xFF334155).withAlpha(140)
+              : const Color(0xFFE2E8F0),
+          width: 1.0,
         );
 
     final defaultShadows = shadows ??
         [
           BoxShadow(
             color: isDark
-                ? Colors.black.withAlpha(120)
-                : AppTheme.primary.withAlpha(18),
-            blurRadius: 18,
-            offset: const Offset(0, 6),
-          ),
-          BoxShadow(
-            color: isDark
-                ? const Color(0xFF1E1B4B).withAlpha(40)
-                : Colors.black.withAlpha(8),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+                ? Colors.black.withAlpha(90)
+                : Colors.black.withAlpha(12),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
           ),
         ];
 
-    Widget content = ClipRRect(
-      borderRadius: BorderRadius.circular(borderRadius),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
-        child: Container(
-          padding: padding,
-          decoration: BoxDecoration(
-            color: effectiveColor,
-            borderRadius: BorderRadius.circular(borderRadius),
-            border: effectiveBorder,
-          ),
-          child: child,
-        ),
+    final List<Color> gradientColors;
+    if (tintColor != null) {
+      if (isSolidGradient) {
+        gradientColors = [
+          tintColor!.withAlpha(240),
+          tintColor!.withAlpha(210),
+        ];
+      } else {
+        gradientColors = [
+          Color.alphaBlend(tintColor!.withAlpha(isDark ? 36 : 18), baseColor),
+          Color.alphaBlend(tintColor!.withAlpha(isDark ? 20 : 10), baseSecondary),
+        ];
+      }
+    } else {
+      gradientColors = [
+        baseColor,
+        baseSecondary,
+      ];
+    }
+
+    final cardDecoration = BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: gradientColors,
       ),
+      borderRadius: BorderRadius.circular(borderRadius),
+      border: effectiveBorder,
     );
+
+    Widget innerContent = Container(
+      padding: padding,
+      decoration: cardDecoration,
+      child: child,
+    );
+
+    // Only apply heavy BackdropFilter if explicitly requested and blur > 0 (e.g. Floating Navbar or Modals)
+    Widget content;
+    if (enableBlur && blur > 0) {
+      content = ClipRRect(
+        borderRadius: BorderRadius.circular(borderRadius),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
+          child: innerContent,
+        ),
+      );
+    } else {
+      content = ClipRRect(
+        borderRadius: BorderRadius.circular(borderRadius),
+        child: innerContent,
+      );
+    }
 
     if (onTap != null) {
       content = Material(
@@ -116,79 +149,83 @@ class GlassScaffoldBackground extends StatelessWidget {
 
     return Stack(
       children: [
-        // Ambient Mesh Gradient Background
-        Positioned.fill(
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: isDark
-                    ? [
-                        const Color(0xFF090D16),
-                        const Color(0xFF0F172A),
-                        const Color(0xFF131127),
-                      ]
-                    : [
-                        const Color(0xFFF1F5F9),
-                        const Color(0xFFEEF2FF),
-                        const Color(0xFFF8FAFC),
+        // RepaintBoundary isolates ambient background so scrolling lists don't trigger GPU repaints
+        RepaintBoundary(
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: isDark
+                          ? [
+                              const Color(0xFF090D16),
+                              const Color(0xFF0F172A),
+                              const Color(0xFF131127),
+                            ]
+                          : [
+                              const Color(0xFFF1F5F9),
+                              const Color(0xFFEEF2FF),
+                              const Color(0xFFF8FAFC),
+                            ],
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: -80,
+                right: -80,
+                child: Container(
+                  width: 260,
+                  height: 260,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        (isDark ? const Color(0xFF4F46E5) : const Color(0xFF818CF8)).withAlpha(isDark ? 45 : 35),
+                        Colors.transparent,
                       ],
+                    ),
+                  ),
+                ),
               ),
-            ),
-          ),
-        ),
-
-        // Glowing Ambient Light Orbs (Top Right & Bottom Left)
-        Positioned(
-          top: -80,
-          right: -80,
-          child: Container(
-            width: 260,
-            height: 260,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: RadialGradient(
-                colors: [
-                  (isDark ? const Color(0xFF4F46E5) : const Color(0xFF818CF8)).withAlpha(isDark ? 55 : 45),
-                  Colors.transparent,
-                ],
+              Positioned(
+                top: 300,
+                left: -100,
+                child: Container(
+                  width: 240,
+                  height: 240,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        (isDark ? const Color(0xFF7C3AED) : const Color(0xFFA78BFA)).withAlpha(isDark ? 35 : 28),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                ),
               ),
-            ),
-          ),
-        ),
-        Positioned(
-          top: 300,
-          left: -100,
-          child: Container(
-            width: 240,
-            height: 240,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: RadialGradient(
-                colors: [
-                  (isDark ? const Color(0xFF7C3AED) : const Color(0xFFA78BFA)).withAlpha(isDark ? 40 : 35),
-                  Colors.transparent,
-                ],
+              Positioned(
+                bottom: 80,
+                right: -60,
+                child: Container(
+                  width: 220,
+                  height: 220,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        (isDark ? const Color(0xFF0EA5E9) : const Color(0xFF38BDF8)).withAlpha(isDark ? 35 : 25),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                ),
               ),
-            ),
-          ),
-        ),
-        Positioned(
-          bottom: 80,
-          right: -60,
-          child: Container(
-            width: 220,
-            height: 220,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: RadialGradient(
-                colors: [
-                  (isDark ? const Color(0xFF0EA5E9) : const Color(0xFF38BDF8)).withAlpha(isDark ? 45 : 30),
-                  Colors.transparent,
-                ],
-              ),
-            ),
+            ],
           ),
         ),
 

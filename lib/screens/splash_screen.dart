@@ -1,11 +1,14 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../providers/warranty_provider.dart';
 import '../utils/app_theme.dart';
 import '../utils/translations.dart';
 import 'main_navigation_host.dart';
+import 'login_screen.dart';
+import 'onboarding_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -44,11 +47,30 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   void _navigateToNext() {
     if (!mounted) return;
 
+    final provider = Provider.of<WarrantyProvider>(context, listen: false);
+    User? currentUser;
+    try {
+      if (Firebase.apps.isNotEmpty) {
+        currentUser = FirebaseAuth.instance.currentUser;
+      }
+    } catch (_) {}
+
+    final isAuth = provider.isLoggedIn || currentUser != null;
+
+    Widget targetScreen;
+    if (!provider.hasCompletedOnboarding) {
+      targetScreen = const OnboardingScreen();
+    } else if (isAuth) {
+      targetScreen = const MainNavigationHost();
+    } else {
+      targetScreen = const LoginScreen();
+    }
+
     Navigator.pushReplacement(
       context,
       PageRouteBuilder(
-        transitionDuration: const Duration(milliseconds: 600),
-        pageBuilder: (_, animation, secondaryAnimation) => const MainNavigationHost(),
+        transitionDuration: const Duration(milliseconds: 450),
+        pageBuilder: (_, animation, secondaryAnimation) => targetScreen,
         transitionsBuilder: (_, animation, _, child) {
           return FadeTransition(opacity: animation, child: child);
         },
@@ -122,7 +144,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                   child: Center(
                     child: Text(
                       'M',
-                      style: GoogleFonts.outfit(
+                      style: AppTheme.font(
                         color: Colors.white,
                         fontWeight: FontWeight.w900,
                         fontSize: 54,
@@ -140,7 +162,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                   children: [
                     Text(
                       AppTranslations.tr('appName', lang),
-                      style: GoogleFonts.outfit(
+                      style: AppTheme.font(
                         fontSize: 34,
                         fontWeight: FontWeight.w900,
                         letterSpacing: -0.5,

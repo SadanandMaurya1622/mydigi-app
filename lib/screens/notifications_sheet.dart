@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../providers/warranty_provider.dart';
 import '../utils/app_theme.dart';
@@ -48,7 +47,7 @@ class NotificationsSheet extends StatelessWidget {
                     children: [
                       Text(
                         AppTranslations.tr('notifications', lang),
-                        style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18),
+                        style: AppTheme.font(fontWeight: FontWeight.bold, fontSize: 18),
                       ),
                       if (provider.unreadNotificationsCount > 0) ...[
                         const SizedBox(width: 8),

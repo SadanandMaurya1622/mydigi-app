@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../models/product_model.dart';
@@ -55,7 +54,7 @@ class ProductDetailScreen extends StatelessWidget {
         scrolledUnderElevation: 0,
         title: Text(
           currentProduct.name,
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16),
+          style: AppTheme.font(fontWeight: FontWeight.bold, fontSize: 16),
         ),
         actions: [
           IconButton(
@@ -152,7 +151,7 @@ class ProductDetailScreen extends StatelessWidget {
                 // 2. Product Name & Brand Info
                 Text(
                   currentProduct.name,
-                  style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold),
+                  style: AppTheme.font(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -195,7 +194,7 @@ class ProductDetailScreen extends StatelessWidget {
                           ),
                           Text(
                             '₹${currentProduct.totalCostOfOwnership.toInt()}',
-                            style: GoogleFonts.outfit(
+                            style: AppTheme.font(
                               fontSize: 20,
                               fontWeight: FontWeight.w900,
                               color: AppTheme.primary,
@@ -288,7 +287,7 @@ class ProductDetailScreen extends StatelessWidget {
                     children: [
                       Text(
                         'Warranty & Invoice Details',
-                        style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14),
+                        style: AppTheme.font(fontWeight: FontWeight.bold, fontSize: 14),
                       ),
                       const SizedBox(height: 12),
                       _buildDetailRow('Warranty Period', currentProduct.warrantyPeriod, isDark),
@@ -326,7 +325,7 @@ class ProductDetailScreen extends StatelessWidget {
                         children: [
                           Text(
                             AppTranslations.tr('qrPassport', lang),
-                            style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14),
+                            style: AppTheme.font(fontWeight: FontWeight.bold, fontSize: 14),
                           ),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -393,7 +392,7 @@ class ProductDetailScreen extends StatelessWidget {
                         children: [
                           Text(
                             AppTranslations.tr('attachedDocs', lang),
-                            style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14),
+                            style: AppTheme.font(fontWeight: FontWeight.bold, fontSize: 14),
                           ),
                           TextButton(
                             onPressed: () {
@@ -463,7 +462,7 @@ class ProductDetailScreen extends StatelessWidget {
                     children: [
                       Text(
                         AppTranslations.tr('expenseHistory', lang),
-                        style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14),
+                        style: AppTheme.font(fontWeight: FontWeight.bold, fontSize: 14),
                       ),
                       const SizedBox(height: 10),
                       if (productExpenses.isEmpty)

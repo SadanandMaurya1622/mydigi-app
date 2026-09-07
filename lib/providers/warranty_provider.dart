@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/product_model.dart';
 import '../services/firestore_service.dart';
 import '../services/realtime_database_service.dart';
@@ -10,7 +11,7 @@ class WarrantyProvider with ChangeNotifier {
   bool _isDarkMode = false;
   String _language = 'en'; // 'en' or 'hi'
   bool _isLoggedIn = false;
-  bool _hasCompletedOnboarding = true;
+  bool _hasCompletedOnboarding = false;
   bool _isLoadingData = false;
 
   bool get isDarkMode => _isDarkMode;
@@ -18,6 +19,22 @@ class WarrantyProvider with ChangeNotifier {
   bool get isLoggedIn => _isLoggedIn;
   bool get hasCompletedOnboarding => _hasCompletedOnboarding;
   bool get isLoadingData => _isLoadingData;
+
+  WarrantyProvider() {
+    _loadPreferences();
+  }
+
+  Future<void> _loadPreferences() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _hasCompletedOnboarding = prefs.getBool('has_completed_onboarding') ?? false;
+      _isDarkMode = prefs.getBool('is_dark_mode') ?? false;
+      _language = prefs.getString('language') ?? 'en';
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error loading preferences: $e');
+    }
+  }
 
   UserProfile _userProfile = UserProfile(
     name: 'MyDigi User',
@@ -65,15 +82,234 @@ class WarrantyProvider with ChangeNotifier {
   void toggleTheme() {
     _isDarkMode = !_isDarkMode;
     notifyListeners();
+    SharedPreferences.getInstance().then((prefs) => prefs.setBool('is_dark_mode', _isDarkMode)).catchError((_) => false);
   }
 
   void setLanguage(String lang) {
     _language = lang;
     notifyListeners();
+    SharedPreferences.getInstance().then((prefs) => prefs.setString('language', lang)).catchError((_) => false);
   }
 
-  void completeOnboarding() {
+  Future<void> completeOnboarding() async {
     _hasCompletedOnboarding = true;
+    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('has_completed_onboarding', true);
+    } catch (e) {
+      debugPrint('Error saving onboarding pref: $e');
+    }
+  }
+
+  Future<void> loginAsGuest() async {
+    await login('Demo User', 'demo@mydigi.app', '+91 98765 43210', uid: 'guest_user');
+    _loadShowcaseProducts();
+  }
+
+  void _loadShowcaseProducts() {
+    if (_products.isNotEmpty) return;
+
+    _products.addAll([
+      ProductItem(
+        id: 'prod_samsung_ac',
+        name: 'Samsung 1.5 Ton WindFree Split AC',
+        category: 'Appliances',
+        brand: 'Samsung',
+        modelNumber: 'AR18CYNAMWK',
+        serialNumber: 'SN-SAM-889123',
+        purchaseDate: '10 Sep 2025',
+        purchasePrice: 42990.0,
+        sellerName: 'Reliance Digital, Mumbai',
+        sellerContact: '+91 22 4912 3456',
+        invoiceNumber: 'INV-SAM-9912',
+        warrantyPeriod: '1 Year Comprehensive',
+        warrantyStartDate: '10 Sep 2025',
+        warrantyEndDate: '10 Sep 2026',
+        warrantyStatus: 'Expiring Soon',
+        daysRemaining: 5,
+        imageUrl: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=800&q=80',
+        costBreakdown: CostBreakdown(
+          purchase: 42990.0,
+          installation: 1500,
+          maintenance: 800,
+          repair: 0,
+          accessories: 1200,
+          amc: 0,
+          other: 0,
+        ),
+        notes: 'Free first service claimed on 15 Feb 2026. Next service due now.',
+      ),
+      ProductItem(
+        id: 'prod_macbook_m3',
+        name: 'Apple MacBook Pro 14" M3 Pro',
+        category: 'Electronics',
+        brand: 'Apple',
+        modelNumber: 'MRX33HN/A',
+        serialNumber: 'C02G8891KLPO',
+        purchaseDate: '15 Jan 2026',
+        purchasePrice: 199900.0,
+        sellerName: 'Imagine Apple Premium Reseller',
+        sellerContact: '+91 22 6123 4567',
+        invoiceNumber: 'IMG-MUM-44912',
+        warrantyPeriod: '1 Year AppleCare',
+        warrantyStartDate: '15 Jan 2026',
+        warrantyEndDate: '15 Jan 2027',
+        warrantyStatus: 'Active',
+        daysRemaining: 132,
+        imageUrl: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=800&q=80',
+        costBreakdown: CostBreakdown(
+          purchase: 199900.0,
+          installation: 0,
+          maintenance: 0,
+          repair: 0,
+          accessories: 4900,
+          amc: 0,
+          other: 0,
+        ),
+        notes: 'Includes MagSafe Charger and USB-C adapter.',
+      ),
+      ProductItem(
+        id: 'prod_lg_fridge',
+        name: 'LG 360L Frost-Free Double Door Refrigerator',
+        category: 'Appliances',
+        brand: 'LG',
+        modelNumber: 'GL-T432APZY',
+        serialNumber: 'LGRF998822KL',
+        purchaseDate: '20 Aug 2025',
+        purchasePrice: 38500.0,
+        sellerName: 'Croma Megastore',
+        sellerContact: '+91 22 2490 8899',
+        invoiceNumber: 'CROMA-INV-7789',
+        warrantyPeriod: '2 Years Comprehensive + 10 Yrs Compressor',
+        warrantyStartDate: '20 Aug 2025',
+        warrantyEndDate: '20 Aug 2027',
+        warrantyStatus: 'Active',
+        daysRemaining: 349,
+        imageUrl: 'https://images.unsplash.com/photo-1571175443880-49e1d25b2bc5?auto=format&fit=crop&w=800&q=80',
+        costBreakdown: CostBreakdown(
+          purchase: 38500.0,
+          installation: 500,
+          maintenance: 0,
+          repair: 0,
+          accessories: 800,
+          amc: 0,
+          other: 0,
+        ),
+      ),
+      ProductItem(
+        id: 'prod_sony_oled',
+        name: 'Sony Bravia 55" 4K Google TV OLED',
+        category: 'Electronics',
+        brand: 'Sony',
+        modelNumber: 'XR-55A80L',
+        serialNumber: 'SNY-XR55-9923',
+        purchaseDate: '01 Nov 2025',
+        purchasePrice: 124990.0,
+        sellerName: 'Sony Center, Worli',
+        sellerContact: '+91 22 4589 1234',
+        invoiceNumber: 'SNY-INV-5541',
+        warrantyPeriod: '2 Years Comprehensive Panel Warranty',
+        warrantyStartDate: '01 Nov 2025',
+        warrantyEndDate: '01 Nov 2027',
+        warrantyStatus: 'Active',
+        daysRemaining: 422,
+        imageUrl: 'https://images.unsplash.com/photo-1593784991095-a205069470b6?auto=format&fit=crop&w=800&q=80',
+        costBreakdown: CostBreakdown(
+          purchase: 124990.0,
+          installation: 1200,
+          maintenance: 0,
+          repair: 0,
+          accessories: 2500,
+          amc: 0,
+          other: 0,
+        ),
+      ),
+      ProductItem(
+        id: 'prod_dyson_v12',
+        name: 'Dyson V12 Detect Slim Cordless Vacuum',
+        category: 'Appliances',
+        brand: 'Dyson',
+        modelNumber: 'SV20 V12',
+        serialNumber: 'DYS-V12-99881',
+        purchaseDate: '10 Feb 2024',
+        purchasePrice: 54900.0,
+        sellerName: 'Dyson Demo Store High Street Phoenix',
+        sellerContact: '+91 22 6677 8899',
+        invoiceNumber: 'DYS-2024-8819',
+        warrantyPeriod: '2 Years Accidental & Motor Cover',
+        warrantyStartDate: '10 Feb 2024',
+        warrantyEndDate: '10 Feb 2026',
+        warrantyStatus: 'Expired',
+        daysRemaining: 0,
+        imageUrl: 'https://images.unsplash.com/photo-1558317374-067fb5f30001?auto=format&fit=crop&w=800&q=80',
+        costBreakdown: CostBreakdown(
+          purchase: 54900.0,
+          installation: 0,
+          maintenance: 1200,
+          repair: 2400,
+          accessories: 3500,
+          amc: 0,
+          other: 0,
+        ),
+      ),
+    ]);
+
+    _expenses.addAll([
+      ExpenseRecord(
+        id: 'exp_1',
+        productId: 'prod_samsung_ac',
+        productName: 'Samsung 1.5 Ton WindFree Split AC',
+        amount: 800.0,
+        date: '15 Feb 2026',
+        category: 'Maintenance',
+        serviceProvider: 'Samsung Authorized Care',
+        notes: 'AC Deep Foam Cleaning & Filter Service',
+        invoiceUrl: '',
+      ),
+      ExpenseRecord(
+        id: 'exp_2',
+        productId: 'prod_samsung_ac',
+        productName: 'Samsung 1.5 Ton WindFree Split AC',
+        amount: 1500.0,
+        date: '10 Sep 2025',
+        category: 'Installation',
+        serviceProvider: 'Reliance ResQ Installation Team',
+        notes: 'Outdoor unit copper piping & wall mounting bracket',
+        invoiceUrl: '',
+      ),
+      ExpenseRecord(
+        id: 'exp_3',
+        productId: 'prod_dyson_v12',
+        productName: 'Dyson V12 Detect Slim Cordless Vacuum',
+        amount: 2400.0,
+        date: '18 Jul 2025',
+        category: 'Repair',
+        serviceProvider: 'Dyson Service Center',
+        notes: 'Fluffy optic cleaner head motor replacement',
+        invoiceUrl: '',
+      ),
+    ]);
+
+    _notifications.addAll([
+      AppNotification(
+        id: 'notif_1',
+        title: 'Samsung AC Warranty Ends in 5 Days!',
+        message: 'Claim your free annual service before warranty expires on 10 Sep.',
+        date: 'Today, 10:30 AM',
+        unread: true,
+        type: 'expiry',
+      ),
+      AppNotification(
+        id: 'notif_2',
+        title: 'MacBook Pro Cloud Backup Complete',
+        message: 'Invoice IMG-MUM-44912 backed up to 256-bit encrypted vault.',
+        date: 'Yesterday',
+        unread: true,
+        type: 'system',
+      ),
+    ]);
+
     notifyListeners();
   }
 

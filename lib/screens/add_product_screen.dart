@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../models/product_model.dart';
 import '../providers/warranty_provider.dart';
@@ -176,7 +175,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
         scrolledUnderElevation: 0,
         title: Text(
           isEdit ? AppTranslations.tr('editProduct', lang) : AppTranslations.tr('addProduct', lang),
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18),
+          style: AppTheme.font(fontWeight: FontWeight.bold, fontSize: 18),
         ),
       ),
       body: GlassScaffoldBackground(
@@ -197,7 +196,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Product Information', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14)),
+                        Text('Product Information', style: AppTheme.font(fontWeight: FontWeight.bold, fontSize: 14)),
                         const SizedBox(height: 12),
 
                         _buildTextField(
@@ -286,7 +285,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Purchase & Warranty', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14)),
+                        Text('Purchase & Warranty', style: AppTheme.font(fontWeight: FontWeight.bold, fontSize: 14)),
                         const SizedBox(height: 12),
 
                         Row(
@@ -423,7 +422,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Photo & Extra Notes', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14)),
+                        Text('Photo & Extra Notes', style: AppTheme.font(fontWeight: FontWeight.bold, fontSize: 14)),
                         const SizedBox(height: 12),
 
                         // Sample Images Horizontal Picker
@@ -520,6 +519,11 @@ class _AddProductScreenState extends State<AddProductScreen> {
           validator: validator,
           decoration: InputDecoration(
             hintText: hint,
+            hintStyle: TextStyle(
+              color: isDark ? AppTheme.textHintDark : AppTheme.textHintLight,
+              fontSize: 13,
+              fontFamilyFallback: AppTheme.fontFallbacks,
+            ),
             filled: true,
             fillColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
             border: OutlineInputBorder(
