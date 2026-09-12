@@ -26,6 +26,10 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>MyDigi uses the camera to photograph your bills and invoices.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>MyDigi lets you select a bill photo to review its details.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

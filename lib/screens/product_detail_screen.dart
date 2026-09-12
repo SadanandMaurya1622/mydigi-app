@@ -10,6 +10,7 @@ import 'add_product_screen.dart';
 import 'expenses_screen.dart';
 import 'claims_screen.dart';
 import 'invoice_vault_screen.dart';
+import 'document_preview_screen.dart';
 
 class ProductDetailScreen extends StatelessWidget {
   final ProductItem product;
@@ -423,7 +424,7 @@ class ProductDetailScreen extends StatelessWidget {
                             ),
                             child: Row(
                               children: [
-                                const Icon(Icons.picture_as_pdf, color: AppTheme.danger, size: 22),
+                                Icon(doc.isLocal ? Icons.receipt_long : Icons.description_outlined, color: AppTheme.primary, size: 22),
                                 const SizedBox(width: 10),
                                 Expanded(
                                   child: Column(
@@ -435,11 +436,12 @@ class ProductDetailScreen extends StatelessWidget {
                                   ),
                                 ),
                                 IconButton(
-                                  icon: const Icon(Icons.download, size: 18),
+                                  tooltip: 'View bill',
+                                  icon: const Icon(Icons.open_in_full, size: 18),
                                   onPressed: () {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('Downloading ${doc.name}...')),
-                                    );
+                                    Navigator.of(context).push(MaterialPageRoute(
+                                      builder: (_) => DocumentPreviewScreen(document: doc),
+                                    ));
                                   },
                                 ),
                               ],

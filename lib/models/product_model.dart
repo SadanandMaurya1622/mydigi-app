@@ -344,6 +344,8 @@ class DocumentRecord {
   final String size;
   final String uploadDate;
   final String? previewUrl;
+  final bool isLocal;
+  final String? mimeType;
 
   DocumentRecord({
     required this.id,
@@ -354,6 +356,8 @@ class DocumentRecord {
     required this.size,
     required this.uploadDate,
     this.previewUrl,
+    this.isLocal = false,
+    this.mimeType,
   });
 
   Map<String, dynamic> toMap() {
@@ -366,6 +370,8 @@ class DocumentRecord {
       'size': size,
       'uploadDate': uploadDate,
       'previewUrl': previewUrl,
+      'isLocal': isLocal,
+      'mimeType': mimeType,
     };
   }
 
@@ -379,6 +385,8 @@ class DocumentRecord {
       size: map['size'] ?? '',
       uploadDate: map['uploadDate'] ?? '',
       previewUrl: map['previewUrl'],
+      isLocal: map['isLocal'] == true,
+      mimeType: map['mimeType'],
     );
   }
 }

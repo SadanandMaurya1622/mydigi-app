@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+
+import '../models/product_model.dart';
 import '../providers/warranty_provider.dart';
 import '../utils/app_theme.dart';
 import '../utils/translations.dart';
 import '../widgets/glass_container.dart';
+import 'document_preview_screen.dart';
 import 'scanner_screen.dart';
 
 class InvoiceVaultScreen extends StatefulWidget {
@@ -15,8 +19,9 @@ class InvoiceVaultScreen extends StatefulWidget {
 
 class _InvoiceVaultScreenState extends State<InvoiceVaultScreen> {
   String _selectedType = 'All';
-
-  final List<String> _types = [
+  bool _loading = true;
+  bool _loadFailed = false;
+  static const _types = [
     'All',
     'Invoice',
     'Warranty Card',
@@ -25,34 +30,54 @@ class _InvoiceVaultScreenState extends State<InvoiceVaultScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+  }
+
+  Future<void> _load() async {
+    if (!mounted) return;
+    setState(() {
+      _loading = true;
+      _loadFailed = false;
+    });
+    try {
+      await context.read<WarrantyProvider>().loadLocalBills();
+    } catch (_) {
+      if (mounted) setState(() => _loadFailed = true);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  void _open(DocumentRecord document) => Navigator.of(context).push(
+    MaterialPageRoute(
+      builder: (_) => DocumentPreviewScreen(document: document),
+    ),
+  );
+
+  String _date(String value) {
+    final date = DateTime.tryParse(value);
+    return date == null
+        ? value
+        : DateFormat('dd MMM yyyy, h:mm a').format(date.toLocal());
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final provider = Provider.of<WarrantyProvider>(context);
-    final lang = provider.language;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    final filteredDocs = _selectedType == 'All'
-        ? provider.documents
-        : provider.documents.where((d) => d.type == _selectedType).toList();
-
+    final provider = context.watch<WarrantyProvider>();
+    final hindi = provider.language == 'hi';
+    final docs = provider.documents
+        .where((doc) => _selectedType == 'All' || doc.type == _selectedType)
+        .toList();
     return Scaffold(
-      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        title: Text(
-          AppTranslations.tr('vault', lang),
-          style: AppTheme.font(fontWeight: FontWeight.bold, fontSize: 18),
-        ),
+        title: Text(AppTranslations.tr('vault', provider.language)),
         actions: [
           IconButton(
-            icon: const Icon(Icons.qr_code_scanner),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ScannerScreen()),
-              );
-            },
+            tooltip: hindi ? 'फिर लोड करें' : 'Refresh vault',
+            onPressed: _loading ? null : _load,
+            icon: const Icon(Icons.refresh),
           ),
         ],
       ),
@@ -60,38 +85,31 @@ class _InvoiceVaultScreenState extends State<InvoiceVaultScreen> {
         child: SafeArea(
           child: Column(
             children: [
-              // Secure Cloud Vault Glass Banner
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.all(16),
                 child: GlassCard(
-                  borderRadius: 22,
-                  padding: const EdgeInsets.all(16),
-                  tintColor: const Color(0xFF1E293B),
-                  isSolidGradient: true,
-                  opacity: 0.88,
-                  blur: 24,
                   child: Row(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: AppTheme.primary.withAlpha(50),
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: const Icon(Icons.lock_outline, color: AppTheme.secondary, size: 24),
+                      const Icon(
+                        Icons.folder_copy_outlined,
+                        color: AppTheme.primary,
+                        size: 32,
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              '256-Bit Encrypted Bill Vault',
-                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13.5),
-                            ),
                             Text(
-                              '${provider.documents.length} Bills & Warranties safely archived in private cloud',
-                              style: const TextStyle(color: Colors.white70, fontSize: 11),
+                              hindi ? 'बिल और दस्तावेज़' : 'Bills & documents',
+                              style: AppTheme.font(fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              hindi
+                                  ? 'स्कैन की गई फोटो इस डिवाइस पर सेव होती हैं। फोटो देखने के लिए बिल पर टैप करें।'
+                                  : 'Scanned photos are saved on this device. Tap a bill to view its photo.',
+                              style: const TextStyle(fontSize: 12),
                             ),
                           ],
                         ),
@@ -100,110 +118,110 @@ class _InvoiceVaultScreenState extends State<InvoiceVaultScreen> {
                   ),
                 ),
               ),
-
-              // Filter Glass Chips
               SizedBox(
-                height: 42,
-                child: ListView.builder(
+                height: 44,
+                child: ListView.separated(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
                   scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
                   itemCount: _types.length,
-                  itemBuilder: (context, idx) {
-                    final t = _types[idx];
-                    final isSel = _selectedType == t;
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 3),
-                      child: GestureDetector(
-                        onTap: () => setState(() => _selectedType = t),
-                        child: GlassCard(
-                          borderRadius: 14,
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          opacity: isSel ? 0.9 : 0.6,
-                          tintColor: isSel ? AppTheme.primary : null,
-                          border: Border.all(
-                            color: isSel ? AppTheme.primary : Colors.white.withAlpha(isDark ? 20 : 180),
-                            width: 1.2,
-                          ),
-                          child: Text(
-                            t,
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
-                              color: isSel ? Colors.white : (isDark ? AppTheme.textMutedDark : AppTheme.textMutedLight),
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  },
+                  separatorBuilder: (_, _) => const SizedBox(width: 8),
+                  itemBuilder: (context, index) => ChoiceChip(
+                    label: Text(_types[index]),
+                    selected: _selectedType == _types[index],
+                    onSelected: (_) =>
+                        setState(() => _selectedType = _types[index]),
+                  ),
                 ),
               ),
-              const SizedBox(height: 8),
-
-              // Document Items List
+              if (_loadFailed)
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  child: TextButton.icon(
+                    key: const ValueKey('retry-vault-load'),
+                    onPressed: _load,
+                    icon: const Icon(Icons.refresh),
+                    label: Text(
+                      hindi
+                          ? 'सेव किए गए बिल नहीं खुले। फिर कोशिश करें।'
+                          : 'Could not load saved bills. Try again.',
+                    ),
+                  ),
+                ),
+              if (_loading) const LinearProgressIndicator(),
               Expanded(
-                child: filteredDocs.isEmpty
+                child: docs.isEmpty
                     ? Center(
                         child: Text(
-                          lang == 'en' ? 'No documents in this category' : 'कोई दस्तावेज़ नहीं मिला',
-                          style: TextStyle(fontSize: 12, color: isDark ? AppTheme.textMutedDark : AppTheme.textMutedLight),
+                          hindi
+                              ? 'अभी कोई बिल नहीं है।'
+                              : 'No bills saved yet.',
                         ),
                       )
                     : ListView.builder(
-                        padding: const EdgeInsets.only(left: 16, right: 16, top: 6, bottom: 100),
-                        itemCount: filteredDocs.length,
-                        itemBuilder: (context, idx) {
-                          final doc = filteredDocs[idx];
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
+                        itemCount: docs.length,
+                        itemBuilder: (context, index) {
+                          final doc = docs[index];
                           return GlassCard(
-                            margin: const EdgeInsets.only(bottom: 10),
-                            borderRadius: 20,
-                            padding: const EdgeInsets.all(14),
-                            opacity: 0.82,
-                            blur: 20,
+                            key: ValueKey('vault-document-${doc.id}'),
+                            margin: const EdgeInsets.only(bottom: 12),
+                            onTap: () => _open(doc),
                             child: Row(
                               children: [
-                                Container(
-                                  padding: const EdgeInsets.all(10),
-                                  decoration: BoxDecoration(
-                                    color: AppTheme.primary.withAlpha(25),
-                                    borderRadius: BorderRadius.circular(14),
-                                  ),
-                                  child: const Icon(Icons.picture_as_pdf, color: AppTheme.primary, size: 24),
+                                Icon(
+                                  doc.isLocal
+                                      ? Icons.receipt_long
+                                      : Icons.description_outlined,
+                                  color: AppTheme.primary,
+                                  size: 30,
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         doc.name,
-                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                                        maxLines: 1,
+                                        maxLines: 2,
                                         overflow: TextOverflow.ellipsis,
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        doc.productName,
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          color: isDark ? AppTheme.textMutedDark : AppTheme.textMutedLight,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 13,
                                         ),
                                       ),
-                                      const SizedBox(height: 2),
+                                      const SizedBox(height: 4),
                                       Text(
-                                        '${doc.size} • Uploaded ${doc.uploadDate}',
-                                        style: const TextStyle(fontSize: 10, color: Colors.grey),
+                                        doc.productName,
+                                        style: const TextStyle(fontSize: 12),
                                       ),
+                                      Text(
+                                        '${doc.size} • ${_date(doc.uploadDate)}',
+                                        style: const TextStyle(fontSize: 11),
+                                      ),
+                                      if (doc.isLocal)
+                                        Text(
+                                          hindi
+                                              ? 'इस डिवाइस पर सेव है'
+                                              : 'Saved on this device',
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            color: AppTheme.primary,
+                                          ),
+                                        ),
                                     ],
                                   ),
                                 ),
                                 IconButton(
-                                  icon: const Icon(Icons.download_rounded, size: 20, color: AppTheme.primary),
-                                  onPressed: () {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('Downloading ${doc.name} (PDF)...')),
-                                    );
-                                  },
+                                  tooltip: hindi ? 'बिल खोलें' : 'View bill',
+                                  onPressed: () => _open(doc),
+                                  icon: const Icon(
+                                    Icons.open_in_full,
+                                    size: 20,
+                                  ),
                                 ),
                               ],
                             ),
@@ -216,17 +234,11 @@ class _InvoiceVaultScreenState extends State<InvoiceVaultScreen> {
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        heroTag: 'fab_vault',
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const ScannerScreen()),
-          );
-        },
-        backgroundColor: AppTheme.primary,
-        foregroundColor: Colors.white,
+        onPressed: () => Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const ScannerScreen())),
         icon: const Icon(Icons.add_a_photo),
-        label: const Text('Scan & Save Bill', style: TextStyle(fontWeight: FontWeight.bold)),
+        label: Text(hindi ? 'बिल स्कैन करें' : 'Scan & Save Bill'),
       ),
     );
   }

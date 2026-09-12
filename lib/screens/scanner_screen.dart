@@ -1,470 +1,431 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
-import '../models/product_model.dart';
+
+import '../models/scanned_bill.dart';
 import '../providers/warranty_provider.dart';
+import '../services/bill_scanner.dart';
+import '../services/local_bill_vault.dart';
 import '../utils/app_theme.dart';
-import '../utils/translations.dart';
 import '../widgets/glass_container.dart';
+import 'add_product_screen.dart';
+import 'invoice_vault_screen.dart';
 
 class ScannerScreen extends StatefulWidget {
-  const ScannerScreen({super.key});
+  const ScannerScreen({super.key, this.imagePicker, this.billScanner});
+
+  final ImagePicker? imagePicker;
+  final BillScanner? billScanner;
 
   @override
   State<ScannerScreen> createState() => _ScannerScreenState();
 }
 
-class _ScannerScreenState extends State<ScannerScreen> with SingleTickerProviderStateMixin {
-  bool _isScanning = false;
-  bool _hasExtracted = false;
-  late AnimationController _animController;
+class _ScannerScreenState extends State<ScannerScreen> {
+  late final ImagePicker _picker;
+  late final BillScanner _scanner;
+  Uint8List? _photo;
+  XFile? _photoFile;
+  ScannedBill? _scannedBill;
+  bool _readingBill = false;
+  bool _scanFailed = false;
+  bool _busy = true;
+  String? _errorCode;
+  String? _photoDocumentId;
+  bool _savedToVault = false;
 
-  // Sample invoices to scan
-  int _selectedPreset = 0;
-  final List<Map<String, dynamic>> _presets = [
-    {
-      'title': 'LG Refrigerator Invoice',
-      'name': 'LG Frost-Free Double Door Refrigerator 360L',
-      'category': 'Appliances',
-      'brand': 'LG',
-      'model': 'GL-T432APZY',
-      'serial': 'LGRF998822KL',
-      'price': 38500.0,
-      'date': '20 Aug 2026',
-      'seller': 'XYZ Mega Electronics, Mumbai',
-      'invoice': 'INV-2026-0897',
-      'warranty': '2 Years Comprehensive',
-      'image': 'https://images.unsplash.com/photo-1571175443880-49e1d25b2bc5?auto=format&fit=crop&w=800&q=80',
-    },
-    {
-      'title': 'MacBook Pro M3 Bill',
-      'name': 'Apple MacBook Pro 14" M3 Pro 18GB/512GB',
-      'category': 'Electronics',
-      'brand': 'Apple',
-      'model': 'MRX33HN/A',
-      'serial': 'C02G8891KLPO',
-      'price': 199900.0,
-      'date': '25 Aug 2026',
-      'seller': 'Imagine Apple Premium Reseller',
-      'invoice': 'IMG-MUM-44912',
-      'warranty': '1 Year Apple International Warranty',
-      'image': 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=800&q=80',
-    },
-    {
-      'title': 'Dyson V12 Vacuum Receipt',
-      'name': 'Dyson V12 Detect Slim Cordless Vacuum',
-      'category': 'Appliances',
-      'brand': 'Dyson',
-      'model': 'SV20 V12',
-      'serial': 'DYS-V12-99881',
-      'price': 54900.0,
-      'date': '15 Aug 2026',
-      'seller': 'Dyson Demo Store High Street Phoenix',
-      'invoice': 'DYS-2026-8819',
-      'warranty': '2 Years Accidental & Motor Cover',
-      'image': 'https://images.unsplash.com/photo-1558317374-067fb5f30001?auto=format&fit=crop&w=800&q=80',
-    },
-  ];
-
-  late TextEditingController _extractedName;
-  late TextEditingController _extractedPrice;
-  late TextEditingController _extractedBrand;
-  late TextEditingController _extractedSerial;
-  late TextEditingController _extractedSeller;
-  late TextEditingController _extractedInvoice;
+  bool get _isMobile =>
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS);
 
   @override
   void initState() {
     super.initState();
-    _animController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1500),
-    )..repeat(reverse: true);
-
-    _extractedName = TextEditingController();
-    _extractedPrice = TextEditingController();
-    _extractedBrand = TextEditingController();
-    _extractedSerial = TextEditingController();
-    _extractedSeller = TextEditingController();
-    _extractedInvoice = TextEditingController();
+    _picker = widget.imagePicker ?? ImagePicker();
+    _scanner = widget.billScanner ?? BillScanner();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _openScanner());
   }
 
-  @override
-  void dispose() {
-    _animController.dispose();
-    _extractedName.dispose();
-    _extractedPrice.dispose();
-    _extractedBrand.dispose();
-    _extractedSerial.dispose();
-    _extractedSeller.dispose();
-    _extractedInvoice.dispose();
-    super.dispose();
-  }
-
-  void _triggerScan() {
-    setState(() => _isScanning = true);
-    Future.delayed(const Duration(milliseconds: 1800), () {
-      if (mounted) {
-        final data = _presets[_selectedPreset];
-        _extractedName.text = data['name'];
-        _extractedPrice.text = data['price'].toInt().toString();
-        _extractedBrand.text = data['brand'];
-        _extractedSerial.text = data['serial'];
-        _extractedSeller.text = data['seller'];
-        _extractedInvoice.text = data['invoice'];
-
-        setState(() {
-          _isScanning = false;
-          _hasExtracted = true;
-        });
+  Future<void> _openScanner() async {
+    if (!mounted) return;
+    try {
+      // Recover a photo if Android restarted the activity while the camera
+      // was open, before starting a new capture on entry to Scan Bill.
+      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+        final recovered = await _picker.retrieveLostData();
+        if (!mounted) return;
+        if (recovered.exception != null) throw recovered.exception!;
+        if (recovered.files?.isNotEmpty ?? false) {
+          await _loadPhoto(recovered.files!.first);
+          if (mounted) setState(() => _busy = false);
+          return;
+        }
       }
+      if (!mounted) return;
+      setState(() => _busy = false);
+      if (_isMobile) await _pickPhoto(ImageSource.camera);
+    } catch (error) {
+      _handleError(error);
+    }
+  }
+
+  Future<void> _pickPhoto(ImageSource source) async {
+    if (_busy) return;
+    setState(() {
+      _busy = true;
+      _errorCode = null;
+    });
+    try {
+      final file = await _picker.pickImage(
+        source: source,
+        preferredCameraDevice: CameraDevice.rear,
+        maxWidth: 2048,
+        maxHeight: 3072,
+        imageQuality: 90,
+        requestFullMetadata: false,
+      );
+      if (!mounted) return;
+      if (file != null) await _loadPhoto(file);
+    } catch (error) {
+      _handleError(error);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _loadPhoto(XFile file) async {
+    final bytes = await file.readAsBytes();
+    final decoded = await decodeImageFromList(bytes);
+    decoded.dispose();
+    if (!mounted) return;
+    setState(() {
+      _photo = bytes;
+      _photoFile = file;
+      _scannedBill = null;
+      _scanFailed = false;
+      _errorCode = null;
+      _photoDocumentId = LocalBillVault.newId();
+      _savedToVault = false;
+    });
+    await _readBill();
+  }
+
+  Future<void> _readBill() async {
+    final file = _photoFile;
+    if (file == null || !_scanner.isSupported) return;
+    setState(() {
+      _readingBill = true;
+      _scanFailed = false;
+    });
+    try {
+      final result = await _scanner.scan(file);
+      if (!mounted) return;
+      setState(() => _scannedBill = result);
+    } catch (_) {
+      if (mounted) setState(() => _scanFailed = true);
+    } finally {
+      if (mounted) setState(() => _readingBill = false);
+    }
+
+    // A successful capture/gallery scan goes straight to its filled form.
+    // Do this only once per recognition result, never from build(), so going
+    // back to the photo does not immediately reopen the form.
+    if (mounted &&
+        !_scanFailed &&
+        (_scannedBill?.fieldCount ?? 0) > 0 &&
+        ModalRoute.of(context)?.isCurrent == true) {
+      setState(() => _busy = false);
+      await _enterDetails();
+    }
+  }
+
+  void _handleError(Object error) {
+    if (!mounted) return;
+    setState(() {
+      _busy = false;
+      _errorCode = error is PlatformException ? error.code : 'capture_failed';
     });
   }
 
-  void _confirmAndSave() {
-    final provider = Provider.of<WarrantyProvider>(context, listen: false);
-    final data = _presets[_selectedPreset];
-    final price = double.tryParse(_extractedPrice.text.trim()) ?? (data['price'] as double);
+  String _errorMessage(bool hindi) {
+    final code = _errorCode?.toLowerCase() ?? '';
+    if (code == 'vault_save_failed') {
+      return hindi
+          ? 'फोटो सेव नहीं हो सकी। डिवाइस में खाली जगह जाँचें और फिर कोशिश करें। आपकी फोटो अभी यहाँ है।'
+          : 'Could not save the photo. Check available storage and try again. Your photo is still here.';
+    }
+    if (code.contains('denied') || code.contains('restricted')) {
+      return hindi
+          ? 'कैमरा या फोटो की अनुमति नहीं मिली। फोन की Settings > Apps > MyDigi > Permissions में अनुमति देकर फिर कोशिश करें।'
+          : 'Camera or photo access was denied. Allow access in Settings > Apps > MyDigi > Permissions, then try again.';
+    }
+    if (code.contains('no_available_camera') ||
+        code.contains('not_supported')) {
+      return hindi
+          ? 'इस डिवाइस पर कैमरा उपलब्ध नहीं है। बिल की फोटो चुनें।'
+          : 'A camera is not available on this device. Choose a bill photo instead.';
+    }
+    if (code.contains('already_active')) {
+      return hindi
+          ? 'कैमरा पहले से खुला है। उसे बंद करके फिर कोशिश करें।'
+          : 'The camera is already open. Close it and try again.';
+    }
+    return hindi
+        ? 'बिल की फोटो नहीं खुल सकी। फिर कोशिश करें या दूसरी फोटो चुनें।'
+        : 'Could not open the bill photo. Try again or choose another photo.';
+  }
 
-    final newProduct = ProductItem(
-      id: 'prod-${DateTime.now().millisecondsSinceEpoch}',
-      name: _extractedName.text.trim(),
-      category: data['category'],
-      brand: _extractedBrand.text.trim(),
-      modelNumber: data['model'],
-      serialNumber: _extractedSerial.text.trim(),
-      purchaseDate: data['date'],
-      purchasePrice: price,
-      sellerName: _extractedSeller.text.trim(),
-      sellerContact: '+91 98100 22334',
-      invoiceNumber: _extractedInvoice.text.trim(),
-      warrantyPeriod: data['warranty'],
-      warrantyStartDate: data['date'],
-      warrantyEndDate: '20 Aug 2028',
-      warrantyStatus: 'Active',
-      daysRemaining: 720,
-      extendedWarranty: false,
-      hasAMC: false,
-      imageUrl: data['image'],
-      costBreakdown: CostBreakdown(
-        purchase: price,
+  Future<void> _enterDetails() async {
+    final photo = _photo;
+    if (_busy || _readingBill || photo == null) return;
+    setState(() => _busy = true);
+    final saved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => AddProductScreen(
+          billPhoto: photo,
+          billDocumentId: _photoDocumentId,
+          scannedBill: _scannedBill,
+        ),
       ),
     );
+    if (!mounted) return;
+    if (saved == true) {
+      Navigator.of(context).pop();
+    } else {
+      setState(() => _busy = false);
+    }
+  }
 
-    provider.addProduct(newProduct);
-    Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('✨ Bill scanned & saved to your Warranty catalog!'),
-        backgroundColor: AppTheme.success,
-      ),
-    );
+  Future<void> _saveToVault() async {
+    final photo = _photo;
+    if (_busy || photo == null) return;
+    setState(() {
+      _busy = true;
+      _errorCode = null;
+    });
+    try {
+      await context.read<WarrantyProvider>().saveBillPhoto(
+        photo,
+        documentId: _photoDocumentId,
+      );
+      if (!mounted) return;
+      setState(() => _savedToVault = true);
+      final hindi = context.read<WarrantyProvider>().language == 'hi';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            hindi
+                ? 'बिल की फोटो वॉल्ट में सेव हो गई।'
+                : 'Bill photo saved to your vault.',
+          ),
+        ),
+      );
+    } catch (_) {
+      if (mounted) setState(() => _errorCode = 'vault_save_failed');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final provider = Provider.of<WarrantyProvider>(context);
-    final lang = provider.language;
-
+    final hindi = context.watch<WarrantyProvider>().language == 'hi';
+    final photo = _photo;
     return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: Text(
-          AppTranslations.tr('aiScannerTitle', lang),
-          style: AppTheme.font(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
-        ),
-      ),
+      appBar: AppBar(title: Text(hindi ? 'बिल स्कैन' : 'Scan Bill')),
       body: GlassScaffoldBackground(
         child: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.all(16),
             child: Column(
               children: [
-                if (!_hasExtracted) ...[
-                  // Presets selector
-                  SizedBox(
-                    height: 38,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: _presets.length,
-                      itemBuilder: (context, idx) {
-                        final isSel = _selectedPreset == idx;
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: ChoiceChip(
-                            label: Text(
-                              _presets[idx]['title'],
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
-                                color: isSel ? Colors.white : Colors.white70,
+                Text(
+                  photo == null
+                      ? (hindi
+                            ? 'बिल या इनवॉइस की साफ फोटो लें।'
+                            : 'Take a clear photo of your bill or invoice.')
+                      : (hindi
+                            ? 'फोटो और बिल से पढ़ी गई जानकारी जाँचें।'
+                            : 'Check the photo and review the details read from your bill.'),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: GlassCard(
+                    child: SizedBox.expand(
+                      child: photo != null
+                          ? InteractiveViewer(
+                              minScale: 1,
+                              maxScale: 5,
+                              child: Center(
+                                child: Image.memory(
+                                  photo,
+                                  key: const ValueKey('bill-photo-preview'),
+                                  fit: BoxFit.contain,
+                                ),
                               ),
-                            ),
-                            selected: isSel,
-                            selectedColor: AppTheme.primary,
-                            backgroundColor: const Color(0xFF1E293B).withAlpha(160),
-                            onSelected: (selected) {
-                              if (selected) setState(() => _selectedPreset = idx);
-                            },
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Camera Viewfinder Box with Glassy Frame
-                  Expanded(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(24),
-                      child: Container(
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF0F172A).withAlpha(180),
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(color: Colors.white.withAlpha(40), width: 1.5),
-                        ),
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            // Bill Image Mock Preview
-                            Image.network(
-                              _presets[_selectedPreset]['image'],
-                              fit: BoxFit.cover,
-                              width: double.infinity,
-                              height: double.infinity,
-                              opacity: const AlwaysStoppedAnimation(0.45),
-                            ),
-
-                            // Laser Scanner Animation Line
-                            AnimatedBuilder(
-                              animation: _animController,
-                              builder: (context, child) {
-                                return Positioned(
-                                  top: MediaQuery.of(context).size.height * 0.15 * _animController.value + 60,
-                                  left: 20,
-                                  right: 20,
-                                  child: Container(
-                                    height: 3,
-                                    decoration: BoxDecoration(
-                                      gradient: const LinearGradient(
-                                        colors: [Colors.transparent, Color(0xFF38BDF8), Color(0xFF818CF8), Colors.transparent],
-                                      ),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: const Color(0xFF38BDF8).withAlpha(180),
-                                          blurRadius: 12,
-                                          spreadRadius: 2,
+                            )
+                          : Center(
+                              child: _busy
+                                  ? const CircularProgressIndicator()
+                                  : Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(
+                                          Icons.document_scanner_outlined,
+                                          size: 64,
+                                          color: AppTheme.primary,
+                                        ),
+                                        const SizedBox(height: 16),
+                                        Text(
+                                          hindi
+                                              ? 'बिल की फोटो लें या चुनें'
+                                              : 'Capture or choose a bill photo',
+                                          textAlign: TextAlign.center,
                                         ),
                                       ],
                                     ),
-                                  ),
-                                );
-                              },
                             ),
-
-                            // Viewfinder Corners
-                            Positioned(
-                              top: 20,
-                              left: 20,
-                              child: Container(
-                                width: 30,
-                                height: 30,
-                                decoration: const BoxDecoration(
-                                  border: Border(
-                                    top: BorderSide(color: AppTheme.secondary, width: 3),
-                                    left: BorderSide(color: AppTheme.secondary, width: 3),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            Positioned(
-                              top: 20,
-                              right: 20,
-                              child: Container(
-                                width: 30,
-                                height: 30,
-                                decoration: const BoxDecoration(
-                                  border: Border(
-                                    top: BorderSide(color: AppTheme.secondary, width: 3),
-                                    right: BorderSide(color: AppTheme.secondary, width: 3),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            Positioned(
-                              bottom: 20,
-                              left: 20,
-                              child: Container(
-                                width: 30,
-                                height: 30,
-                                decoration: const BoxDecoration(
-                                  border: Border(
-                                    bottom: BorderSide(color: AppTheme.secondary, width: 3),
-                                    left: BorderSide(color: AppTheme.secondary, width: 3),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            Positioned(
-                              bottom: 20,
-                              right: 20,
-                              child: Container(
-                                width: 30,
-                                height: 30,
-                                decoration: const BoxDecoration(
-                                  border: Border(
-                                    bottom: BorderSide(color: AppTheme.secondary, width: 3),
-                                    right: BorderSide(color: AppTheme.secondary, width: 3),
-                                  ),
-                                ),
-                              ),
-                            ),
-
-                            // Center Message Glass Pill
-                            if (!_isScanning)
-                              GlassCard(
-                                borderRadius: 20,
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                opacity: 0.85,
-                                child: const Text(
-                                  'Align Bill or Invoice inside viewfinder',
-                                  style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
                     ),
                   ),
-                  const SizedBox(height: 16),
-
-                  // Scan Action Button
-                  ElevatedButton.icon(
-                    onPressed: _isScanning ? null : _triggerScan,
-                    icon: _isScanning
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                          )
-                        : const Icon(Icons.camera_alt),
-                    label: Text(
-                      _isScanning ? 'Extracting with OCR AI...' : 'Snap & Auto-Extract Details',
-                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                ),
+                if (_errorCode != null) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    _errorMessage(hindi),
+                    key: const ValueKey('camera-error'),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
                     ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primary,
-                      foregroundColor: Colors.white,
-                      minimumSize: const Size(double.infinity, 54),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    ),
+                    textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 10),
-                ] else ...[
-                  // Extracted Details Glass Review View
-                  Expanded(
-                    child: GlassCard(
-                      borderRadius: 24,
-                      padding: const EdgeInsets.all(16),
-                      opacity: 0.88,
-                      blur: 24,
-                      child: ListView(
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(Icons.check_circle, color: AppTheme.success, size: 20),
-                              const SizedBox(width: 8),
-                              Text(
-                                'AI Extracted Data (Editable)',
-                                style: AppTheme.font(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          _buildScanField('Product Name', _extractedName),
-                          const SizedBox(height: 10),
-                          Row(
-                            children: [
-                              Expanded(child: _buildScanField('Price (₹)', _extractedPrice)),
-                              const SizedBox(width: 10),
-                              Expanded(child: _buildScanField('Brand', _extractedBrand)),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-                          Row(
-                            children: [
-                              Expanded(child: _buildScanField('Serial No', _extractedSerial)),
-                              const SizedBox(width: 10),
-                              Expanded(child: _buildScanField('Invoice No', _extractedInvoice)),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-                          _buildScanField('Seller Store', _extractedSeller),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
+                ],
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    if (_isMobile || kIsWeb) ...[
                       Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => setState(() => _hasExtracted = false),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.white70,
-                            side: const BorderSide(color: Colors.white30),
-                            minimumSize: const Size(0, 50),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        child: OutlinedButton.icon(
+                          key: const ValueKey('open-bill-camera'),
+                          onPressed: _busy || _readingBill
+                              ? null
+                              : () => _pickPhoto(ImageSource.camera),
+                          icon: const Icon(Icons.camera_alt_outlined),
+                          label: Text(
+                            photo == null
+                                ? (hindi ? 'कैमरा खोलें' : 'Open Camera')
+                                : (hindi ? 'फिर फोटो लें' : 'Retake'),
                           ),
-                          child: const Text('Scan Again'),
                         ),
                       ),
                       const SizedBox(width: 12),
-                      Expanded(
-                        flex: 2,
-                        child: ElevatedButton(
-                          onPressed: _confirmAndSave,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.success,
-                            foregroundColor: Colors.white,
-                            minimumSize: const Size(0, 50),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                          ),
-                          child: const Text('Save to My Catalog', style: TextStyle(fontWeight: FontWeight.bold)),
-                        ),
-                      ),
                     ],
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        key: const ValueKey('choose-bill-photo'),
+                        onPressed: _busy || _readingBill
+                            ? null
+                            : () => _pickPhoto(ImageSource.gallery),
+                        icon: const Icon(Icons.photo_library_outlined),
+                        label: Text(hindi ? 'फोटो चुनें' : 'Choose Photo'),
+                      ),
+                    ),
+                  ],
+                ),
+                if (photo != null) ...[
+                  const SizedBox(height: 8),
+                  if (_readingBill) ...[
+                    const LinearProgressIndicator(
+                      key: ValueKey('bill-reading'),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      hindi
+                          ? 'बिल से जानकारी पढ़ रहे हैं…'
+                          : 'Reading your bill…',
+                    ),
+                  ] else ...[
+                    Text(
+                      _scanFailed
+                          ? (hindi
+                                ? 'बिल पढ़ा नहीं जा सका। फिर कोशिश करें या जानकारी खुद भरें।'
+                                : 'Could not read the bill. Retry or enter the details manually.')
+                          : ((_scannedBill?.fieldCount ?? 0) > 0
+                                ? (hindi
+                                      ? '${_scannedBill!.fieldCount} जानकारी मिलीं। सेव करने से पहले जाँचें।'
+                                      : '${_scannedBill!.fieldCount} details found. Review them before saving.')
+                                : (hindi
+                                      ? 'जानकारी अपने आप नहीं मिली। फोटो देखकर खुद भरें।'
+                                      : 'No details found automatically. Use the photo to fill in the fields.')),
+                      key: const ValueKey('bill-scan-status'),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                    if (_scanFailed)
+                      TextButton(
+                        key: const ValueKey('retry-bill-reading'),
+                        onPressed: _busy ? null : _readBill,
+                        child: Text(hindi ? 'फिर पढ़ें' : 'Retry Reading Bill'),
+                      ),
+                  ],
+                  const SizedBox(height: 8),
+                  FilledButton.icon(
+                    key: const ValueKey('enter-bill-details'),
+                    onPressed: _busy || _readingBill ? null : _enterDetails,
+                    icon: const Icon(Icons.edit_note),
+                    label: Text(
+                      (_scannedBill?.fieldCount ?? 0) > 0
+                          ? (hindi
+                                ? 'बिल की जानकारी जाँचें'
+                                : 'Review Bill Details')
+                          : (hindi
+                                ? 'बिल की जानकारी भरें'
+                                : 'Enter Bill Details'),
+                    ),
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 52),
+                    ),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 4),
+                  OutlinedButton.icon(
+                    key: const ValueKey('save-bill-photo'),
+                    onPressed: _busy || _readingBill
+                        ? null
+                        : (_savedToVault
+                              ? () => Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => const InvoiceVaultScreen(),
+                                  ),
+                                )
+                              : _saveToVault),
+                    icon: Icon(
+                      _savedToVault ? Icons.folder_open : Icons.save_alt,
+                    ),
+                    label: Text(
+                      _savedToVault
+                          ? (hindi ? 'वॉल्ट खोलें' : 'Open Vault')
+                          : (hindi
+                                ? 'फोटो वॉल्ट में सेव करें'
+                                : 'Save Photo to Vault'),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 52),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    hindi ? 'इस डिवाइस पर सेव होगी।' : 'Saved on this device.',
+                    style: const TextStyle(fontSize: 12),
+                  ),
                 ],
               ],
             ),
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildScanField(String label, TextEditingController controller) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: const TextStyle(fontSize: 11, color: Colors.white70)),
-        const SizedBox(height: 4),
-        TextField(
-          controller: controller,
-          style: const TextStyle(color: Colors.white, fontSize: 13),
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: const Color(0xFF1E293B).withAlpha(160),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.white24)),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          ),
-        ),
-      ],
     );
   }
 }

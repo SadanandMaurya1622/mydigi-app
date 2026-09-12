@@ -1,12 +1,13 @@
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/product_model.dart';
 import '../services/firestore_service.dart';
 import '../services/realtime_database_service.dart';
+import '../services/local_bill_vault.dart';
 
-/// Pure Firebase Provider that streams all data live from Firebase Realtime Database and Cloud Firestore.
-/// No mock or hardcoded data is used.
+/// Syncs catalog data with Firebase and keeps captured bill photos on device.
 class WarrantyProvider with ChangeNotifier {
   bool _isDarkMode = false;
   String _language = 'en'; // 'en' or 'hi'
@@ -20,13 +21,53 @@ class WarrantyProvider with ChangeNotifier {
   bool get hasCompletedOnboarding => _hasCompletedOnboarding;
   bool get isLoadingData => _isLoadingData;
 
-  WarrantyProvider() {
+  WarrantyProvider({LocalBillVault? billVault}) : _billVault = billVault ?? LocalBillVault() {
     _loadPreferences();
   }
+
+  final LocalBillVault _billVault;
+  bool _disposed = false;
+  int _vaultGeneration = 0;
+  String get vaultOwner => _isLoggedIn && _activeUid.isNotEmpty ? _activeUid : 'guest_user';
+
+  Future<void> loadLocalBills() async {
+    final owner = vaultOwner;
+    final generation = ++_vaultGeneration;
+    final documents = await _billVault.load(owner);
+    if (_disposed || owner != vaultOwner || generation != _vaultGeneration) return;
+    for (final document in documents) {
+      // Merge without removing a photo saved while this load was in progress.
+      if (!_documents.any((existing) => existing.id == document.id)) {
+        _documents.add(document);
+      }
+    }
+    notifyListeners();
+  }
+
+  Future<DocumentRecord> saveBillPhoto(Uint8List photo, {ProductItem? product, String? documentId}) async {
+    final owner = vaultOwner;
+    final document = await _billVault.save(
+      owner: owner,
+      id: documentId ?? LocalBillVault.newId(),
+      photo: photo,
+      product: product,
+    );
+    if (_disposed || owner != vaultOwner) {
+      throw StateError('The active account changed while saving.');
+    }
+    _documents.removeWhere((existing) => existing.id == document.id);
+    _documents.insert(0, document);
+    notifyListeners();
+    return document;
+  }
+
+  Future<Uint8List> readBillPhoto(DocumentRecord document) =>
+      _billVault.readPhoto(vaultOwner, document.id);
 
   Future<void> _loadPreferences() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      if (_disposed) return;
       _hasCompletedOnboarding = prefs.getBool('has_completed_onboarding') ?? false;
       _isDarkMode = prefs.getBool('is_dark_mode') ?? false;
       _language = prefs.getString('language') ?? 'en';
@@ -322,6 +363,10 @@ class WarrantyProvider with ChangeNotifier {
         ? uid
         : (email.isNotEmpty ? email.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_') : 'user_main');
 
+    if (effectiveUid != vaultOwner) {
+      _vaultGeneration++;
+      _documents.clear();
+    }
     _userProfile = UserProfile(
       name: name.isNotEmpty ? name : 'MyDigi User',
       email: email.isNotEmpty ? email : 'user@mydigi.app',
@@ -340,6 +385,11 @@ class WarrantyProvider with ChangeNotifier {
 
     // 2. Initialize Real-Time Streams for this user from Realtime Database
     _initRealtimeStreams(effectiveUid);
+    try {
+      await loadLocalBills();
+    } catch (e) {
+      debugPrint('[WarrantyProvider] Local vault could not be loaded: $e');
+    }
   }
 
   void _initRealtimeStreams(String uid) {
@@ -522,6 +572,7 @@ class WarrantyProvider with ChangeNotifier {
   }
 
   void logout() {
+    _vaultGeneration++;
     _isLoggedIn = false;
     _cancelSubscriptions();
     _products.clear();
@@ -545,6 +596,8 @@ class WarrantyProvider with ChangeNotifier {
 
   @override
   void dispose() {
+    _disposed = true;
+    _vaultGeneration++;
     _cancelSubscriptions();
     super.dispose();
   }
@@ -579,20 +632,6 @@ class WarrantyProvider with ChangeNotifier {
     if (uid.isNotEmpty) {
       RealtimeDatabaseService().saveProduct(uid, product);
       FirestoreService().saveProduct(uid, product);
-      // Create and save invoice document
-      final doc = DocumentRecord(
-        id: 'doc-${DateTime.now().millisecondsSinceEpoch}',
-        productId: product.id,
-        productName: product.name,
-        name: '${product.brand}_Invoice.pdf',
-        type: 'Invoice',
-        size: '1.4 MB',
-        uploadDate: 'Just now',
-      );
-      _documents.insert(0, doc);
-      notifyListeners();
-      RealtimeDatabaseService().saveDocument(uid, doc);
-      FirestoreService().saveDocument(uid, doc);
     }
   }
 
@@ -698,18 +737,25 @@ class WarrantyProvider with ChangeNotifier {
     notifyListeners();
 
     final uid = _activeUid;
-    if (uid.isNotEmpty) {
+    if (uid.isNotEmpty && !document.isLocal) {
       RealtimeDatabaseService().saveDocument(uid, document);
       FirestoreService().saveDocument(uid, document);
     }
   }
 
-  void deleteDocument(String docId) {
+  Future<void> deleteDocument(String docId) async {
+    final local = _documents.any((doc) => doc.id == docId && doc.isLocal);
+    if (local) {
+      final owner = vaultOwner;
+      await _billVault.delete(owner, docId);
+      if (_disposed || owner != vaultOwner) return;
+      _vaultGeneration++;
+    }
     _documents.removeWhere((d) => d.id == docId);
     notifyListeners();
 
     final uid = _activeUid;
-    if (uid.isNotEmpty) {
+    if (uid.isNotEmpty && !local) {
       RealtimeDatabaseService().deleteDocument(uid, docId);
       FirestoreService().deleteDocument(uid, docId);
     }
